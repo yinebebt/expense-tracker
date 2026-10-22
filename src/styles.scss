@@ -30,3 +30,113 @@
     --viz-muted: #a3a29b;
   }
 }
+
+// Section headings look the same on every page: the dashboard's periods and list headers.
+ion-list-header {
+  --color: var(--viz-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  p {
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+}
+
+// Empty states, shared by every page.
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+// Small centered dialog sized to its content: transaction and payee detail.
+ion-modal.dialog {
+  --width: min(92vw, 420px);
+  --height: fit-content;
+  --max-height: 85vh;
+  --border-radius: 16px;
+
+  ion-content {
+    --padding-start: 20px;
+    --padding-end: 20px;
+    --padding-top: 12px;
+    --padding-bottom: 20px;
+  }
+
+  // Kind of thing on the left, close button on the right.
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--viz-muted);
+  }
+
+  .close {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    margin-inline-end: -8px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--viz-muted);
+    font-size: 22px;
+  }
+
+  .why {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--viz-muted);
+  }
+
+  // Label / value rows.
+  .facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 16px;
+    margin: 16px 0 0;
+    font-size: 0.9rem;
+
+    dt {
+      color: var(--viz-muted);
+    }
+
+    dd {
+      margin: 0;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    ion-select {
+      --padding-start: 0;
+      --padding-end: 0;
+      width: auto;
+      min-height: 36px;
+      font-size: 0.9rem;
+      color: var(--ion-color-primary);
+    }
+  }
+
+  .link {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: var(--ion-color-primary);
+    font: inherit;
+  }
+
+  .muted {
+    color: var(--viz-muted);
+  }
+}

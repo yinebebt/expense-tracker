@@ -76,6 +76,11 @@ export function spendingByCategory(txs: Transaction[], r: DateRange): CategoryTo
     .sort((a, b) => b.amountMinor - a.amountMinor);
 }
 
+/** The debits that make up `total(txs, 'debit', r)`, in the order given. */
+export function spentIn(txs: Transaction[], r: DateRange): Transaction[] {
+  return txs.filter((t) => t.type === 'debit' && isCounted(t) && inRange(t, r));
+}
+
 /** Spending per day across a range, one entry per local calendar day. */
 export function dailySpending(txs: Transaction[], r: DateRange): DayTotal[] {
   const days: DayTotal[] = [];

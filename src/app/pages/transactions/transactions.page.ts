@@ -3,7 +3,6 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
-  ActionSheetController,
   IonButton,
   IonButtons,
   IonContent,
@@ -13,6 +12,7 @@ import {
   IonItemGroup,
   IonLabel,
   IonList,
+  IonNote,
   IonProgressBar,
   IonRefresher,
   IonRefresherContent,
@@ -21,19 +21,22 @@ import {
   IonTitle,
   IonToolbar,
   RefresherCustomEvent,
-  ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { settingsOutline } from 'ionicons/icons';
 import { TxItemComponent } from '../../components/tx-item.component';
 import { formatMinor } from '../../models/money';
-import { CATEGORIES, CATEGORY_LABELS, Transaction } from '../../models/transaction.model';
+import { CATEGORY_LABELS, Transaction } from '../../models/transaction.model';
+import { TxDetailService } from '../../services/tx-detail.service';
 import { SmsSyncService } from '../../services/sms-sync.service';
 import { TransactionService } from '../../services/transaction.service';
+import { isCounted } from '../../summary/summary';
 
 interface DayGroup {
   day: number;
   items: Transaction[];
+  /** Counted debits only, so it matches the dashboard. */
+  spentMinor: number;
 }
 
 @Component({
@@ -54,6 +57,7 @@ interface DayGroup {
     IonItemGroup,
     IonItemDivider,
     IonLabel,
+    IonNote,
     IonProgressBar,
     IonRefresher,
     IonRefresherContent,
@@ -92,9 +96,17 @@ interface DayGroup {
             <ion-item-group>
               <ion-item-divider sticky>
                 <ion-label>{{ g.day | date: 'EEEE d MMMM' }}</ion-label>
+                @if (g.spentMinor) {
+                  <ion-note slot="end" class="day-total">{{ fmt(g.spentMinor) }}</ion-note>
+                }
               </ion-item-divider>
               @for (t of g.items; track t.id) {
-                <app-tx-item [tx]="t" [clickable]="true" (picked)="changeCategory($event)" />
+                <app-tx-item
+                  [tx]="t"
+                  dateFormat="HH:mm"
+                  [clickable]="true"
+                  (picked)="txDetail.open($event)"
+                />
               }
             </ion-item-group>
           }
@@ -114,20 +126,20 @@ interface DayGroup {
     </ion-content>
   `,
   styles: `
-    .empty {
-      padding: 48px 24px;
-      text-align: center;
-      color: var(--ion-color-medium);
+    .day-total {
+      padding-inline-end: 16px;
+      color: var(--ion-text-color);
+      font-variant-numeric: tabular-nums;
     }
   `,
 })
 export class TransactionsPage {
   private readonly txService = inject(TransactionService);
-  private readonly sheets = inject(ActionSheetController);
-  private readonly toasts = inject(ToastController);
+  protected readonly txDetail = inject(TxDetailService);
   protected readonly sync = inject(SmsSyncService);
 
   protected readonly query = signal('');
+  protected readonly fmt = formatMinor;
 
   protected readonly groups = computed<DayGroup[]>(() => {
     const q = this.query().trim().toLowerCase();
@@ -136,9 +148,12 @@ export class TransactionsPage {
       if (q && !this.searchText(t).includes(q)) continue;
       const d = new Date(t.occurredAt);
       const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const spent = t.type === 'debit' && isCounted(t) ? t.amountMinor! : 0;
       const last = groups.at(-1);
-      if (last?.day === day) last.items.push(t);
-      else groups.push({ day, items: [t] });
+      if (last?.day === day) {
+        last.items.push(t);
+        last.spentMinor += spent;
+      } else groups.push({ day, items: [t], spentMinor: spent });
     }
     return groups;
   });
@@ -157,51 +172,6 @@ export class TransactionsPage {
   protected async refresh(event: RefresherCustomEvent): Promise<void> {
     await this.sync.sync();
     await event.target.complete();
-  }
-
-  protected async changeCategory(t: Transaction): Promise<void> {
-    const rawText = t.rawText;
-    const copy = rawText
-      ? [{ text: 'Copy message text', handler: () => void this.copy(rawText) }]
-      : [];
-    const sheet = await this.sheets.create({
-      header: t.merchant ?? t.source,
-      subHeader: t.needsReview ? (rawText ?? 'Needs review') : 'Change category',
-      buttons: [
-        ...copy,
-        ...CATEGORIES.map((c) => ({
-          text: CATEGORY_LABELS[c] + (c === t.category ? ' ✓' : ''),
-          handler: () => {
-            this.txService
-              .setCategory(t.id, c)
-              .catch((err) => console.error('Updating category failed', err));
-          },
-        })),
-        { text: 'Cancel', role: 'cancel' },
-      ],
-    });
-    await sheet.present();
-  }
-
-  /** For sending an unrecognised message to whoever maintains the parsing rules. */
-  private async copy(text: string): Promise<void> {
-    let ok = true;
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // Older WebViews: fall back to a hidden textarea.
-      const el = document.createElement('textarea');
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      ok = document.execCommand('copy');
-      el.remove();
-    }
-    const toast = await this.toasts.create({
-      message: ok ? 'Copied. Remove names and account numbers before sending it.' : 'Copy failed',
-      duration: 3000,
-    });
-    await toast.present();
   }
 
   private searchText(t: Transaction): string {

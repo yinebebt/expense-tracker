@@ -1,5 +1,5 @@
 import { Transaction } from '../models/transaction.model';
-import { dayRange, monthRange, summarize, weekRange } from './summary';
+import { dayRange, monthRange, spentIn, summarize, weekRange } from './summary';
 
 let n = 0;
 const tx = (at: Date, amountMinor: number, p: Partial<Transaction> = {}): Transaction => ({
@@ -98,6 +98,13 @@ describe('summarize', () => {
   it('splits the week into seven days of spending, Monday first', () => {
     expect(s.week.days.map((d) => d.day.getDate())).toEqual([19, 20, 21, 22, 23, 24, 25]);
     expect(s.week.days.map((d) => d.spentMinor)).toEqual([20000, 0, 10000, 20000, 0, 0, 0]);
+  });
+
+  it('lists the debits behind a day’s total', () => {
+    const today = spentIn(txs, dayRange(NOW));
+    expect(today.map((t) => t.amountMinor)).toEqual([15000, 5000]);
+    expect(today.reduce((sum, t) => sum + t.amountMinor!, 0)).toBe(s.today.spent);
+    expect(spentIn(txs, dayRange(new Date(2026, 9, 20)))).toEqual([]); // only income and transfers
   });
 
   it('reports money moved between own accounts once per move', () => {

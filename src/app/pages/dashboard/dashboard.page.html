@@ -63,57 +63,82 @@
       }
     </div>
   } @else {
-    <section class="hero">
-      <div class="label">Spent this week</div>
-      <div class="figure">{{ fmt(s().week.spent) }}</div>
-      <div class="sub">
-        {{ s().week.start | date: 'EEE d MMM' }} – {{ weekLastDay() | date: 'EEE d MMM' }}
+    <section class="period">
+      <header class="period-head">
+        <h2>{{ dayTitle() ?? (pickedDay() | date: 'EEEE') }}</h2>
+        <span class="when">{{ pickedDay() | date: 'd MMMM' }}</span>
+      </header>
+      <div class="figure hero">
+        <span>{{ amountHidden() ? 'ETB ****' : fmt(pickedTotal()) }}</span>
+        <button
+          type="button"
+          class="eye"
+          [attr.aria-label]="amountHidden() ? 'Show amount' : 'Hide amount'"
+          [attr.aria-pressed]="amountHidden()"
+          (click)="toggleAmount()"
+        >
+          <ion-icon [name]="amountHidden() ? 'eye-off-outline' : 'eye-outline'" />
+        </button>
       </div>
+      <app-week-chart
+        class="inset"
+        [days]="s().week.days"
+        [today]="s().today.start"
+        [selected]="pickedIndex()"
+        (selectedChange)="dayIndex.set($event)"
+      >
+        This week · {{ fmt(s().week.spent) }}
+      </app-week-chart>
+      <ion-list class="rows" [attr.aria-label]="'Spent on ' + (pickedDay() | date: 'EEEE')">
+        @for (t of pickedSpent(); track t.id) {
+          <app-tx-item
+            [tx]="t"
+            dateFormat="HH:mm"
+            [clickable]="true"
+            (picked)="txDetail.open($event)"
+          />
+        } @empty {
+          <p class="muted">
+            {{ pickedIndex() > todayIndex() ? 'Nothing yet.' : 'Nothing spent this day.' }}
+          </p>
+        }
+      </ion-list>
     </section>
 
-    <section class="tiles">
-      <div class="tile">
-        <div class="label">Today</div>
-        <div class="value">{{ fmt(s().today.spent) }}</div>
-      </div>
-      <div class="tile">
-        <div class="label">{{ s().month.start | date: 'MMMM' }}</div>
-        <div class="value">{{ fmt(s().month.spent) }}</div>
-      </div>
-      <div class="tile">
-        <div class="label">Received this week</div>
-        <div class="value">{{ fmt(s().week.received) }}</div>
-      </div>
-    </section>
-
-    <section class="block">
-      <h2>Day by day</h2>
-      <app-week-chart [days]="s().week.days" [today]="s().today.start" />
-    </section>
-
-    <section class="block">
-      <h2>Where it went in {{ s().month.start | date: 'MMMM' }}</h2>
-      @if (s().month.byCategory.length) {
-        <app-category-bar [items]="s().month.byCategory" (picked)="showCategory($event)" />
-      } @else {
-        <p class="muted">No spending this month yet.</p>
+    <section class="period">
+      <header class="period-head">
+        <h2>{{ s().month.start | date: 'MMMM' }}</h2>
+        <span class="when">so far</span>
+      </header>
+      <div class="figure">{{ fmt(s().month.spent) }}</div>
+      @if (s().month.received) {
+        <div class="received">Received {{ fmt(s().month.received) }}</div>
       }
-    </section>
-
-    <ion-list lines="none" class="notes">
+      <div class="inset">
+        @if (s().month.byCategory.length) {
+          <app-category-bar [items]="s().month.byCategory" (picked)="showCategory($event)" />
+        } @else {
+          <p class="muted">No spending this month yet.</p>
+        }
+      </div>
       @if (s().month.moved.count) {
-        <ion-item routerLink="/tabs/payees" [detail]="true">
-          <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
-          <ion-label class="ion-text-wrap">
-            Moved between your accounts in {{ s().month.start | date: 'MMMM' }}
-            <p>
-              {{ fmt(s().month.moved.amountMinor) }} · {{ s().month.moved.count }}
-              {{ s().month.moved.count === 1 ? 'move' : 'moves' }} · not counted
-            </p>
-          </ion-label>
-        </ion-item>
+        <ion-list class="rows" lines="none">
+          <ion-item routerLink="/tabs/payees" [detail]="true">
+            <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
+            <ion-label class="ion-text-wrap">
+              Moved between your accounts
+              <p>
+                {{ fmt(s().month.moved.amountMinor) }} · {{ s().month.moved.count }}
+                {{ s().month.moved.count === 1 ? 'move' : 'moves' }} · not counted
+              </p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
       }
-      @if (reviewCount()) {
+    </section>
+
+    @if (reviewCount()) {
+      <ion-list class="rows" lines="none">
         <ion-item routerLink="/tabs/transactions" [queryParams]="{ q: 'review' }" [detail]="true">
           <ion-icon slot="start" name="alert-circle-outline" color="warning" />
           <ion-label class="ion-text-wrap">
@@ -122,17 +147,7 @@
             <p>Not counted until they're understood.</p>
           </ion-label>
         </ion-item>
-      }
-    </ion-list>
-
-    <ion-list>
-      <ion-list-header>
-        <ion-label>Recent</ion-label>
-        <ion-button routerLink="/tabs/transactions" size="small">See all</ion-button>
-      </ion-list-header>
-      @for (t of recent(); track t.id) {
-        <app-tx-item [tx]="t" />
-      }
-    </ion-list>
+      </ion-list>
+    }
   }
 </ion-content>

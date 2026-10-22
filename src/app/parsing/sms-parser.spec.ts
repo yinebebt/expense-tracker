@@ -49,6 +49,26 @@ describe('parseSms', () => {
     });
   });
 
+  it('does not take a bare account number as the merchant', () => {
+    const res = parseSms({
+      id: '1',
+      address: 'CBE',
+      date: 0,
+      body: 'Dear Abebe your Account 1*****6789 has been debited with ETB 1,500.00 to account 1000123456789. Ref No FT26294XYZ12.',
+    });
+    expect(res.kind === 'parsed' && res.tx).toMatchObject({ type: 'debit', merchant: null });
+  });
+
+  it('keeps an unrecognised transaction in review rather than treating it as an ad', () => {
+    const res = parseSms({
+      id: '1',
+      address: '127',
+      date: 0,
+      body: 'Dear Abebe, your loan of ETB 5,000.00 is disbursed. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/CJN5RE8T7W',
+    });
+    expect(res.kind === 'parsed' && res.tx).toMatchObject({ type: 'unknown', needsReview: true });
+  });
+
   it('sends a message with conflicting debit and credit wording to review', () => {
     const res = parseSms({
       id: '1',

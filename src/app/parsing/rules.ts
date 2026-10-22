@@ -13,6 +13,8 @@ export interface TxPattern {
   party?: RegExp;
   /** Fixed category for this pattern, e.g. airtime purchases. */
   category?: Category;
+  /** Fixed merchant, for messages that name no payee. */
+  merchant?: string;
 }
 
 export interface SourceRule {
@@ -28,8 +30,10 @@ export interface SourceRule {
 const AMOUNT = String.raw`\b(?:ETB|Birr|Br)\.?\s?(?<amount>\d[\d,]*(?:\.\d{1,2})?)`;
 const re = (pattern: string) => new RegExp(pattern, 'i');
 
-const PARTY_TO = /\bto (?<party>[^.(]+?)\s*(?:\(|\bon\b|\.)/i;
+const PARTY_TO = /\bto (?<party>[^.(;]+?)\s*(?:\(|;|\bon\b|\.)/i;
 const PARTY_FROM = /\bfrom (?<party>[^.,(]+?)\s*(?:\(|,|\bon\b|\.)/i;
+/** Amharic "ከ X" (from X), ending at the amount, a "-" separator, "በ" (on) or the sentence end. */
+const PARTY_FROM_AM = /(?:^|\s)ከ\s+(?<party>[^።]+?)\s*(?:\bETB\b|፟|\s-\s|\sበ\s|።)/;
 
 /** Checked in order; for each type the first match wins. */
 export const SHARED_PATTERNS: TxPattern[] = [
@@ -49,11 +53,21 @@ export const SHARED_PATTERNS: TxPattern[] = [
     party: PARTY_TO,
   },
   {
+    // Also e-Birr: "ETB 400 has been paid to merchant Feres."
     type: 'debit',
-    match: re(AMOUNT + String.raw`\s+(?:sent|paid|transferr?ed)\s+to\b`),
+    match: re(AMOUNT + String.raw`\s+(?:has been\s+|was\s+)?(?:sent|paid|transferr?ed)\s+to\b`),
     party: PARTY_TO,
   },
   { type: 'debit', match: re(String.raw`\b(?:withdrawn|withdrawal of)\s+` + AMOUNT) },
+  {
+    // CBE: "A debit transaction of ETB 600.0. has occurred on your account …"
+    type: 'debit',
+    match: re(String.raw`\bdebit transaction of\s+` + AMOUNT),
+    party: PARTY_TO,
+  },
+  // Amharic (BOA): "ብር 1,250.00 ወጪ ተደርጓል" = debited. The parser rewrites ብር to ETB first.
+  // BOA spells the verb more than one way (ተደርጓል, ተደርጓዋል).
+  { type: 'debit', match: re(AMOUNT + String.raw`\s*ወጪ ተደርጓ`) },
   {
     type: 'credit',
     match: re(String.raw`\b(?:credited|credit of)\s+(?:with\s+|by\s+)?` + AMOUNT),
@@ -65,12 +79,40 @@ export const SHARED_PATTERNS: TxPattern[] = [
     party: PARTY_FROM,
   },
   { type: 'credit', match: re(String.raw`\breceived\s+` + AMOUNT), party: PARTY_FROM },
+  {
+    // CBE: "credited by SAMPLE INSURANCE COMPANY S.C (SIC) with ETB 1200.00"
+    type: 'credit',
+    match: re(String.raw`\bcredited by\s.{1,120}?\swith\s+` + AMOUNT),
+    party: /\bcredited by (?<party>.+?)\s*(?:\(|\swith\s)/i,
+  },
   { type: 'credit', match: re(String.raw`\bdeposit of\s+` + AMOUNT), party: PARTY_FROM },
+  {
+    type: 'credit',
+    match: re(String.raw`\bcredit transaction of\s+` + AMOUNT),
+    party: PARTY_FROM,
+  },
+  {
+    // e-Birr: "ETB350 Received from Sample Transport PLC (2519…)"
+    type: 'credit',
+    match: re(AMOUNT + String.raw`\s+(?:received|credited|deposited)\s+from\b`),
+    party: PARTY_FROM,
+  },
+  // Amharic (BOA): "ከ ALMAZ BEKELE ብር 750.00 ገቢ ተደርጓዋል" = credited.
+  { type: 'credit', match: re(AMOUNT + String.raw`\s*ገቢ ተደርጓ`), party: PARTY_FROM_AM },
+  {
+    // Amharic (M-PESA): "600.00 ብር ከ Commercial Bank Of Ethiopia-B2C ፟- ከ … ተቀብለዋል" = received.
+    type: 'credit',
+    match: re(AMOUNT + String.raw`\s+ከ\s[^።]*?ተቀብለዋል`),
+    party: PARTY_FROM_AM,
+  },
 ];
 
-/** Reference numbers: "Ref No FT…", "Ref: …", "transaction number is …", "Transaction ID …", receipt links "?id=…". */
+/**
+ * Reference numbers: "Ref No FT…", "Ref: …", "transaction number is …", "Transaction ID …",
+ * receipt links "?id=…", "?trx=…" or ".../FT…", and M-PESA's Amharic "መለያ ቁጥር …" (transaction ID).
+ */
 export const REFERENCE =
-  /(?:\bRef(?:erence)?\b\.?\s*(?:No\.?|Number|#)?|\btransaction (?:number|ID)|\bTxn ?ID|[?&]id=)\s*(?:is\s+)?[:.]?\s*(?<ref>(?=[A-Z]*\d)[A-Z0-9]{6,})/i;
+  /(?:\bRef(?:erence)?\b\.?\s*(?:No\.?|Number|#)?|\btransaction (?:number|ID)|\bTxn ?ID|[?&](?:id|trx)=|\/(?=FT\d)|መለያ ቁጥር)\s*(?:is\s+)?[:.]?\s*(?<ref>(?=[A-Z]*\d)[A-Z0-9]{6,})/i;
 
 const bank = (source: string, ...senders: string[]): SourceRule => ({ source, senders });
 
@@ -108,11 +150,40 @@ export const SOURCES: SourceRule[] = [
       {
         type: 'debit',
         match: re(String.raw`You have (?:bought|purchased)\b.*?\b(?:for|of)\s+` + AMOUNT),
+        merchant: 'Ethio telecom',
+        category: 'bills',
+      },
+      {
+        // "You have recharged ETB 100.00 airtime for 9…"
+        type: 'debit',
+        match: re(String.raw`You have recharged\s+` + AMOUNT),
+        merchant: 'Ethio telecom',
+        category: 'bills',
+      },
+      {
+        // "You have paid ETB 50.00 for package Weekly Internet Package … purchase made for 09…"
+        type: 'debit',
+        match: re(String.raw`\bpaid\s+` + AMOUNT + String.raw`\s+for package\b`),
+        merchant: 'Ethio telecom',
         category: 'bills',
       },
     ],
   },
-  bank('M-PESA', 'M-PESA'),
+  {
+    source: 'M-PESA',
+    senders: ['M-PESA'],
+    patterns: [
+      {
+        // Amharic: "የ5.00 ብር የአየር ሰዓት … ገዝተዋል" (bought airtime),
+        // "የ2,100.00 ብር የሳፋሪኮም ጥቅል … ገዝተዋል" (bought a Safaricom package).
+        type: 'debit',
+        match: re(AMOUNT + String.raw`\s*(?:የአየር ሰዓት|የሳፋሪኮም ጥቅል)[^።]*?ገዝተዋል`),
+        merchant: 'Safaricom',
+        category: 'bills',
+      },
+      { type: 'debit', match: re(AMOUNT + String.raw`[^።]*?ገዝተዋል`) },
+    ],
+  },
   bank('CBE Birr', 'CBE Birr'),
   bank('HelloCash', 'HelloCash'),
   bank('Kacha', 'Kacha'),
@@ -125,15 +196,31 @@ export const OTP = /\b(OTP|one[- ]time (?:password|code)|verification code|secur
 /** Reversals and refunds go to review rather than guessing their direction. */
 export const REVERSAL = /\b(revers(?:ed|al)|refund(?:ed)?)\b/i;
 
-/** Promotional wording. Only checked when no transaction pattern matched. */
-export const PROMO =
-  /\b(offer|promo(?:tion)?|win|winners?|cashback|discount|bonus|lottery|dial \*\d+)\b/i;
+/**
+ * Promotional wording. Only checked when no transaction pattern matched, and kept to
+ * signals real transactions don't carry: an unparsed transaction belongs in review,
+ * not silently dropped.
+ */
+export const PROMO = new RegExp(
+  String.raw`\b(?:offer|promo(?:tion)?|win|winners?|cashback|discount|bonus|lottery|dial \*\d+|up to (?:ETB|Birr))\b` +
+    // "Download Sample Lending App" but not telebirr's "To download your payment information".
+    String.raw`|\bdownload\s+(?:\S+\s+){0,4}app\b|play\.google\.com|apps\.apple\.com` +
+    // Amharic: prize, win, discount, "up to birr" (ብር is rewritten to ETB first).
+    String.raw`|ሽልማት|ያሸንፉ|ቅናሽ|እስከ ETB`,
+  'i',
+);
 
 /** Balance phrases, stripped before deciding whether a message still mentions an amount. */
-export const BALANCE_PHRASE = new RegExp(String.raw`balance\b[^.]*?` + AMOUNT, 'gi');
+export const BALANCE_PHRASE = new RegExp(String.raw`(?:balance\b|ቀሪ \S*ሳብ)[^.።]*?` + AMOUNT, 'gi');
 
 /** Any amount, for the unknown-message fallback. */
 export const ANY_AMOUNT = re(AMOUNT);
 
 /** "1,250.00 ETB" → "ETB 1,250.00", so patterns only handle one order. */
 export const TRAILING_CURRENCY = /(\d[\d,]*(?:\.\d{1,2})?)\s?(?:ETB|Birr|Br)\b/gi;
+
+/**
+ * "ብር 1,250.00" or "1,250.00 ብር" (Amharic "birr") → "ETB 1,250.00". The leading form wins
+ * when both could apply, as in "ቁጥርዎ 1*23 ብር 1,250.00".
+ */
+export const AMHARIC_CURRENCY = /ብር\s?(?=\d)|(\d[\d,]*(?:\.\d{1,2})?)\s?ብር(?!\s?\d)/g;

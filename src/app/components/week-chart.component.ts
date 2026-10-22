@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, input, signal } from '@angular/core';
+import { Component, computed, input, model, signal } from '@angular/core';
 import { formatMinor } from '../models/money';
 import { DayTotal } from '../summary/summary';
 
@@ -27,18 +27,13 @@ function columnPath(x: number, top: number): string {
   return `M${x},${BASE} V${top + r} Q${x},${top} ${x + r},${top} H${x + BAR - r} Q${x + BAR},${top} ${x + BAR},${top + r} V${BASE} Z`;
 }
 
-/** Spending per day for one week. Tap a day to read its exact amount; "List" shows all seven. */
+/** Spending per day for one week. Tap a day to select it; "List" shows all seven. Content goes in the header. */
 @Component({
   selector: 'app-week-chart',
   imports: [DatePipe],
   template: `
     <div class="head">
-      @if (selectedDay(); as d) {
-        <span class="readout">
-          <span class="readout-day">{{ d.day | date: 'EEE d MMM' }}</span>
-          <strong>{{ fmt(d.spentMinor) }}</strong>
-        </span>
-      }
+      <span class="caption"><ng-content /></span>
       <button type="button" class="toggle" (click)="asList.set(!asList())">
         {{ asList() ? 'Chart' : 'List' }}
       </button>
@@ -47,7 +42,11 @@ function columnPath(x: number, top: number): string {
     @if (asList()) {
       <table class="days">
         @for (d of days(); track $index) {
-          <tr [class.today]="$index === todayIndex()">
+          <tr
+            [class.today]="$index === todayIndex()"
+            [class.on]="$index === selected()"
+            (click)="select($index)"
+          >
             <td>{{ d.day | date: 'EEEE d MMM' }}</td>
             <td class="num">{{ fmt(d.spentMinor) }}</td>
           </tr>
@@ -58,6 +57,7 @@ function columnPath(x: number, top: number): string {
         [attr.viewBox]="'0 0 ' + W + ' ' + H"
         role="group"
         aria-label="Spending per day this week"
+        [class.picking]="selected() !== null"
       >
         <line class="baseline" x1="0" [attr.x2]="W" [attr.y1]="BASE" [attr.y2]="BASE" />
         @for (b of bars(); track b.i) {
@@ -67,8 +67,8 @@ function columnPath(x: number, top: number): string {
             role="button"
             [attr.aria-label]="(b.day | date: 'EEEE') + ', ' + fmt(b.minor)"
             [attr.aria-pressed]="b.i === selected()"
-            (click)="selected.set(b.i)"
-            (keydown.enter)="selected.set(b.i)"
+            (click)="select(b.i)"
+            (keydown.enter)="select(b.i)"
           >
             <rect class="hit" [attr.x]="b.bandX" y="0" [attr.width]="BAND" [attr.height]="H" />
             @if (b.top !== null) {
@@ -98,12 +98,7 @@ function columnPath(x: number, top: number): string {
       gap: 8px;
       margin-bottom: 4px;
     }
-    .readout {
-      display: flex;
-      gap: 8px;
-      align-items: baseline;
-    }
-    .readout-day {
+    .caption {
       color: var(--viz-muted);
       font-size: 0.85rem;
     }
@@ -137,10 +132,10 @@ function columnPath(x: number, top: number): string {
       opacity: 0.25;
     }
     path {
-      fill: var(--viz-1-soft);
-    }
-    path.on {
       fill: var(--viz-1);
+    }
+    .picking path:not(.on) {
+      fill: var(--viz-1-soft);
     }
     text {
       text-anchor: middle;
@@ -165,8 +160,14 @@ function columnPath(x: number, top: number): string {
       padding: 6px 0;
       border-bottom: 1px solid var(--viz-baseline);
     }
+    table.days tr {
+      cursor: pointer;
+    }
     table.days tr.today td {
       font-weight: 600;
+    }
+    table.days tr.on td {
+      color: var(--ion-color-primary);
     }
     .num {
       text-align: right;
@@ -184,7 +185,8 @@ export class WeekChartComponent {
   protected readonly BAND = BAND;
   protected readonly fmt = formatMinor;
   protected readonly asList = signal(false);
-  protected readonly selected = signal(0);
+  /** Index into `days`, or null when no day is picked. */
+  readonly selected = model<number | null>(null);
 
   protected readonly todayIndex = computed(() => {
     const t = this.today();
@@ -195,8 +197,6 @@ export class WeekChartComponent {
         d.day.getDate() === t.getDate(),
     );
   });
-
-  protected readonly selectedDay = computed(() => this.days()[this.selected()] ?? null);
 
   protected readonly bars = computed(() => {
     const days = this.days();
@@ -222,11 +222,7 @@ export class WeekChartComponent {
     });
   });
 
-  constructor() {
-    // Start on today (or the last day when today isn't in this range).
-    effect(() => {
-      const t = this.todayIndex();
-      this.selected.set(t >= 0 ? t : this.days().length - 1);
-    });
+  protected select(i: number): void {
+    this.selected.set(i);
   }
 }

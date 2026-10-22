@@ -72,6 +72,50 @@ class SmsInboxPlugin : Plugin() {
     }
 
     /**
+     * One inbox message by id, for showing a transaction's original SMS. Resolves with no
+     * `message` when it was deleted or isn't from one of `senders`, so only bank SMS ever
+     * reach the web layer.
+     */
+    @PluginMethod
+    fun get(call: PluginCall) {
+        if (getPermissionState("sms") != PermissionState.GRANTED) {
+            call.reject("SMS permission not granted", "PERMISSION_DENIED")
+            return
+        }
+        val senders = call.getArray("senders")?.toList<String>()?.map(::normalize)?.toSet().orEmpty()
+        val id = call.getString("id")?.toLongOrNull()
+        val result = JSObject()
+
+        try {
+            if (id != null) {
+                context.contentResolver.query(
+                    Telephony.Sms.Inbox.CONTENT_URI,
+                    arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE),
+                    "${Telephony.Sms._ID} = ?",
+                    arrayOf(id.toString()),
+                    null,
+                )?.use { c ->
+                    if (c.moveToFirst()) {
+                        val from = c.getString(0)
+                        if (from != null && normalize(from) in senders) {
+                            result.put("message", JSObject().apply {
+                                put("id", id.toString())
+                                put("address", from)
+                                put("body", c.getString(1) ?: "")
+                                put("date", c.getLong(2))
+                            })
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            call.reject("Reading SMS failed", e)
+            return
+        }
+        call.resolve(result)
+    }
+
+    /**
      * Business-looking sender IDs (names or short codes, not phone numbers) received since `since`
      * that aren't in `known`, with message counts. Lets beta testers report banks the app misses.
      * Reads addresses only, never message bodies.

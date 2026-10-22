@@ -33,9 +33,13 @@ export class TransactionService {
   async importMessages(msgs: RawSms[]): Promise<ImportResult> {
     const now = Date.now();
     const rows: Transaction[] = [];
+    const ignoredSmsIds: string[] = [];
     for (const sms of msgs) {
       const res = parseSms(sms);
-      if (res.kind !== 'parsed') continue;
+      if (res.kind !== 'parsed') {
+        if (sms.id) ignoredSmsIds.push(sms.id);
+        continue;
+      }
       const t = toTransaction(sms, res.tx, crypto.randomUUID(), now);
       const ruled = payeeRuleCategory(t, this.rules);
       if (ruled) {
@@ -45,6 +49,8 @@ export class TransactionService {
       rows.push(t);
     }
 
+    // An ad or balance notice stored for review by an older parser goes away on re-read.
+    await this.db.deleteReviews(ignoredSmsIds);
     const inserted = await this.db.insertMany(rows);
     if (rows.length) {
       const earliest = rows.reduce((min, r) => Math.min(min, r.occurredAt), Infinity);

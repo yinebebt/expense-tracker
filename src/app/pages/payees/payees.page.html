@@ -24,9 +24,7 @@
       <p>People and businesses you pay or get money from show up here once SMS are read.</p>
     </div>
   } @else {
-    <p class="hint">
-      Tap a payee to set a category for all their transactions. New SMS with that name get it too.
-    </p>
+    <p class="hint">Tap a payee to set one category for all their transactions.</p>
     @if (payees().length) {
       <ion-list>
         @for (p of payees(); track p.key) {

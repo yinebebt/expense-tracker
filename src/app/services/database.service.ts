@@ -52,8 +52,18 @@ const COLUMNS = [
   'created_at',
 ];
 
-/** Duplicate dedup keys are skipped, which makes re-imports safe. */
-export const INSERT_SQL = `INSERT OR IGNORE INTO transactions (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map(() => '?').join(', ')})`;
+/**
+ * A duplicate dedup key keeps the stored row but takes the newly parsed merchant, and
+ * the new category unless the stored one was set by hand. Re-imports are safe, and a
+ * re-read after a parser fix repairs old rows.
+ */
+export const INSERT_SQL = `INSERT INTO transactions (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map(() => '?').join(', ')})
+ON CONFLICT (dedup_key) DO UPDATE SET
+  merchant = excluded.merchant,
+  category = CASE WHEN category_manual THEN category ELSE excluded.category END,
+  category_manual = category_manual OR excluded.category_manual`;
+
+const SUPERSEDED_REVIEW_SQL = `DELETE FROM transactions WHERE type = 'unknown' AND sms_id = ? AND source = ?`;
 
 export function toRow(t: Transaction): unknown[] {
   return [
@@ -126,16 +136,38 @@ export class DatabaseService {
   }
 
   /** Returns how many rows were actually added. */
+  /**
+   * Upserts rows and returns how many the table grew by. A row the parser now understands
+   * replaces the review row stored earlier for the same SMS: the type is part of the dedup
+   * key, so without this a re-read would keep both.
+   */
   async insertMany(txs: Transaction[]): Promise<number> {
     if (!txs.length) return 0;
     const db = await this.conn();
     const before = await this.count(db);
+    const superseded = txs
+      .filter((t) => t.type !== 'unknown' && t.smsId)
+      .map((t) => ({ statement: SUPERSEDED_REVIEW_SQL, values: [t.smsId, t.source] }));
     await db.executeSet(
-      txs.map((t) => ({ statement: INSERT_SQL, values: toRow(t) })),
+      [...superseded, ...txs.map((t) => ({ statement: INSERT_SQL, values: toRow(t) }))],
       true,
     );
     await this.persist();
-    return (await this.count(db)) - before;
+    return Math.max(0, (await this.count(db)) - before);
+  }
+
+  /** Removes review rows stored for these SMS. Parsed rows are never touched. */
+  async deleteReviews(smsIds: string[]): Promise<void> {
+    if (!smsIds.length) return;
+    const db = await this.conn();
+    await db.executeSet(
+      smsIds.map((id) => ({
+        statement: `DELETE FROM transactions WHERE type = 'unknown' AND sms_id = ?`,
+        values: [id],
+      })),
+      true,
+    );
+    await this.persist();
   }
 
   async all(): Promise<Transaction[]> {

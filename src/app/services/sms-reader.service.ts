@@ -10,6 +10,8 @@ export interface SmsReader {
   requestAccess(): Promise<SmsAccess>;
   /** Inbox messages from `senders` received at or after `since` (epoch ms), oldest first. */
   read(senders: string[], since: number): Promise<RawSms[]>;
+  /** One message by inbox id, or null when it's gone or not from `senders`. */
+  get(id: string, senders: string[]): Promise<RawSms | null>;
   /** Business-looking senders since `since` that aren't in `known`. Addresses only, no message text. */
   otherSenders(known: string[], since: number): Promise<SenderCount[]>;
   /** Calls `onChange` when the SMS store changes while the app runs. Returns a stop function. */
@@ -27,6 +29,7 @@ interface SmsInboxPlugin {
   checkPermissions(): Promise<{ sms: PermissionState }>;
   requestPermissions(): Promise<{ sms: PermissionState }>;
   list(options: { senders: string[]; since: number }): Promise<{ messages: RawSms[] }>;
+  get(options: { id: string; senders: string[] }): Promise<{ message?: RawSms }>;
   otherSenders(options: { known: string[]; since: number }): Promise<{ senders: SenderCount[] }>;
   startWatching(): Promise<void>;
   addListener(event: 'smsChanged', fn: () => void): Promise<PluginListenerHandle>;
@@ -56,6 +59,11 @@ export class SmsReaderService implements SmsReader {
   async read(senders: string[], since: number): Promise<RawSms[]> {
     if (!this.android) return [];
     return (await SmsInbox.list({ senders, since })).messages;
+  }
+
+  async get(id: string, senders: string[]): Promise<RawSms | null> {
+    if (!this.android) return null;
+    return (await SmsInbox.get({ id, senders })).message ?? null;
   }
 
   async otherSenders(known: string[], since: number): Promise<SenderCount[]> {

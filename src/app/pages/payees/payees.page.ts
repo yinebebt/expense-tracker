@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import {
-  ActionSheetController,
   IonButton,
   IonButtons,
   IonContent,
@@ -17,11 +16,12 @@ import {
   IonSegmentButton,
   IonTitle,
   IonToolbar,
+  ModalController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { settingsOutline } from 'ionicons/icons';
 import { formatMinor } from '../../models/money';
-import { CATEGORIES, CATEGORY_LABELS } from '../../models/transaction.model';
+import { CATEGORY_LABELS } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 import { PayeeSummary } from '../../summary/payees';
 
@@ -54,8 +54,7 @@ const FREQUENT = 5;
 })
 export class PayeesPage {
   private readonly txService = inject(TransactionService);
-  private readonly sheets = inject(ActionSheetController);
-  private readonly router = inject(Router);
+  private readonly modals = inject(ModalController);
 
   protected readonly frequent = FREQUENT;
   protected readonly filter = signal<Filter>('all');
@@ -97,27 +96,12 @@ export class PayeesPage {
   }
 
   protected async open(p: PayeeSummary): Promise<void> {
-    const current = this.txService.payeeRule(p.name);
-    const sheet = await this.sheets.create({
-      header: p.name,
-      subHeader: `Category for all ${p.count} transactions with ${p.name}, and future ones`,
-      buttons: [
-        {
-          text: 'Show transactions',
-          handler: () =>
-            void this.router.navigate(['/tabs/transactions'], { queryParams: { q: p.name } }),
-        },
-        ...CATEGORIES.map((c) => ({
-          text: CATEGORY_LABELS[c] + (c === current ? ' ✓' : ''),
-          handler: () => {
-            this.txService
-              .setPayeeCategory(p.name, c)
-              .catch((err) => console.error('Setting payee category failed', err));
-          },
-        })),
-        { text: 'Cancel', role: 'cancel' },
-      ],
+    const { PayeeDetailComponent } = await import('../../components/payee-detail.component');
+    const modal = await this.modals.create({
+      component: PayeeDetailComponent,
+      componentProps: { payeeKey: p.key },
+      cssClass: 'dialog',
     });
-    await sheet.present();
+    await modal.present();
   }
 }

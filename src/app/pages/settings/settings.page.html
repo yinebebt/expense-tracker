@@ -3,18 +3,18 @@
     <ion-buttons slot="start"><ion-back-button defaultHref="/tabs/dashboard" /></ion-buttons>
     <ion-title>Settings</ion-title>
   </ion-toolbar>
+  @if (sync.syncing()) {
+    <ion-progress-bar type="indeterminate" />
+  }
 </ion-header>
 
 <ion-content>
   <ion-list>
-    <ion-list-header>SMS access</ion-list-header>
+    <ion-list-header>SMS</ion-list-header>
     <ion-item>
-      <ion-label class="ion-text-wrap">
-        Reading SMS
-        <p>
-          Only messages from known banks and wallets are read, to find debits and credits. Other SMS
-          are never read, and nothing leaves the phone.
-        </p>
+      <ion-label>
+        Access
+        <p>Bank and wallet SMS only. Nothing leaves the phone.</p>
       </ion-label>
       @if (accessText(); as a) {
         <ion-note slot="end" [color]="a[1]">{{ a[0] }}</ion-note>
@@ -23,149 +23,115 @@
 
     @switch (sync.access()) {
       @case ('prompt') {
-        <div class="actions">
-          <ion-button expand="block" (click)="sync.requestAccess()">Allow SMS access</ion-button>
-        </div>
+        <ion-item [button]="true" [detail]="false" (click)="sync.requestAccess()">
+          <ion-label color="primary">Allow SMS access</ion-label>
+        </ion-item>
       }
       @case ('denied') {
-        <ion-item lines="none">
+        <ion-item [button]="true" (click)="sync.openAppSettings()">
           <ion-label class="ion-text-wrap">
-            <p>
-              Android won't ask again. In app settings, open Permissions → SMS → Allow. If SMS is
-              greyed out, first tap ⋮ at the top right and choose “Allow restricted settings”. Then
-              come back here.
-            </p>
+            <span class="action">Open app settings</span>
+            <p>Permissions → SMS → Allow. Greyed out? ⋮ → Allow restricted settings.</p>
           </ion-label>
         </ion-item>
-        <div class="actions">
-          <ion-button expand="block" (click)="sync.openAppSettings()">Open app settings</ion-button>
-        </div>
       }
       @case ('granted') {
-        <ion-item lines="none">
-          <ion-label class="ion-text-wrap">
-            Last checked
+        <ion-item>
+          <ion-label>Last checked</ion-label>
+          <ion-note slot="end">
             @if (sync.lastResult(); as r) {
-              <p>
-                {{ r.at | date: 'EEE d MMM, HH:mm' }} · {{ r.inserted }} new
-                {{ r.inserted === 1 ? 'transaction' : 'transactions' }}
-              </p>
+              {{ r.at | date: 'd MMM, HH:mm' }} · {{ r.inserted }} new
             } @else {
-              <p>{{ sync.syncing() ? 'Reading…' : 'Not yet' }}</p>
+              {{ sync.syncing() ? 'Reading…' : 'Not yet' }}
             }
-          </ion-label>
+          </ion-note>
         </ion-item>
-        <div class="actions">
-          <ion-button expand="block" (click)="sync.sync()" [disabled]="sync.syncing()">
-            Check for new SMS
-          </ion-button>
-          <ion-button
-            expand="block"
-            fill="outline"
-            (click)="sync.reimport()"
-            [disabled]="sync.syncing()"
-          >
-            Re-read last {{ windowDays }} days
-          </ion-button>
-        </div>
-        <ion-item lines="none">
-          <ion-label class="ion-text-wrap">
-            <p>New SMS are picked up when you open the app or while it's open.</p>
-          </ion-label>
+        <ion-item
+          [button]="true"
+          [detail]="false"
+          [disabled]="sync.syncing()"
+          (click)="sync.sync()"
+        >
+          <ion-label color="primary">Check for new SMS</ion-label>
+        </ion-item>
+        <ion-item
+          [button]="true"
+          [detail]="false"
+          [disabled]="sync.syncing()"
+          (click)="sync.reimport()"
+        >
+          <ion-label color="primary">Re-read last {{ windowDays }} days</ion-label>
         </ion-item>
       }
     }
     @if (sync.error(); as e) {
       <ion-item lines="none">
-        <ion-label class="ion-text-wrap" color="danger"
-          ><p>{{ e }}</p></ion-label
-        >
+        <ion-label class="ion-text-wrap" color="danger">{{ e }}</ion-label>
       </ion-item>
     }
 
     <ion-list-header>Banks and wallets</ion-list-header>
-    <ion-item lines="none">
+    <ion-item [button]="true" [detail]="false" (click)="showSupported.set(!showSupported())">
       <ion-label class="ion-text-wrap">
-        <p>{{ supported }}</p>
+        Supported
+        @if (showSupported()) {
+          <p>{{ supported.join(', ') }}</p>
+        }
       </ion-label>
+      <ion-note slot="end">{{ supported.length }}</ion-note>
     </ion-item>
     @if (sync.access() === 'granted') {
-      <ion-item lines="none">
-        <ion-label class="ion-text-wrap">
-          Bank missing?
-          <p>
-            Lists SMS senders on this phone that look like a bank or service but aren't recognised.
-            Only sender names are shown, never message text.
-          </p>
-        </ion-label>
-      </ion-item>
       @if (otherSenders(); as list) {
+        @for (s of list; track s.address) {
+          <ion-item>
+            <ion-label>{{ s.address }}</ion-label>
+            <ion-note slot="end">{{ s.count }} SMS</ion-note>
+          </ion-item>
+        } @empty {
+          <ion-item>
+            <ion-label>No unrecognised senders</ion-label>
+          </ion-item>
+        }
         @if (list.length) {
-          @for (s of list; track s.address) {
-            <ion-item>
-              <ion-label>{{ s.address }}</ion-label>
-              <ion-note slot="end">{{ s.count }} SMS</ion-note>
-            </ion-item>
-          }
           <ion-item lines="none">
             <ion-label class="ion-text-wrap">
-              <p>
-                If your bank is in this list, send its name and one example message (with account
-                numbers and names removed) to whoever shared the app with you.
-              </p>
+              <p>Bank listed here? Send one example SMS, names and numbers removed.</p>
             </ion-label>
-          </ion-item>
-        } @else {
-          <ion-item lines="none">
-            <ion-label><p>No other senders found.</p></ion-label>
           </ion-item>
         }
       } @else {
-        <div class="actions">
-          <ion-button
-            expand="block"
-            fill="outline"
-            (click)="showOtherSenders()"
-            [disabled]="busy()"
-          >
-            Show unrecognised senders
-          </ion-button>
-        </div>
+        <ion-item [button]="true" [detail]="false" [disabled]="busy()" (click)="showOtherSenders()">
+          <ion-label class="ion-text-wrap">
+            <span class="action">Find a missing bank</span>
+            <p>Lists unrecognised senders. Names only, never message text.</p>
+          </ion-label>
+        </ion-item>
       }
     }
 
     <ion-list-header>Data</ion-list-header>
     <ion-item>
       <ion-label class="ion-text-wrap">
-        Stored transactions
+        Transactions
         @if (sourceCounts()) {
           <p>{{ sourceCounts() }}</p>
         }
       </ion-label>
       <ion-note slot="end">{{ count() }}</ion-note>
     </ion-item>
-    <div class="actions">
-      <ion-button
-        expand="block"
-        fill="outline"
-        color="danger"
-        (click)="confirmClear()"
-        [disabled]="busy() || !count()"
-      >
-        Delete all transactions
-      </ion-button>
-    </div>
+    <ion-item
+      [button]="true"
+      [detail]="false"
+      [disabled]="busy() || !count()"
+      (click)="confirmClear()"
+    >
+      <ion-label color="danger">Delete all transactions</ion-label>
+    </ion-item>
 
     <ion-list-header>About</ion-list-header>
     <ion-item lines="none">
-      <ion-label class="ion-text-wrap">
-        Expense Tracker beta
-        <p>Version {{ version() }}</p>
-        <p>
-          Everything is stored on this phone only: no account, no server, no analytics. The app has
-          no internet permission.
-        </p>
-      </ion-label>
+      <ion-label>Version</ion-label>
+      <ion-note slot="end">{{ version() }}</ion-note>
     </ion-item>
   </ion-list>
 </ion-content>

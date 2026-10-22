@@ -189,6 +189,204 @@ export const FIXTURES: Fixture[] = [
     },
   },
   {
+    name: 'telebirr package purchase',
+    sms: sms(
+      '127',
+      new Date(2026, 9, 22, 7, 28, 0),
+      'Dear Abebe\nYou have paid ETB 50.00 for package Weekly Internet Package for 500 MB purchase made for 251912345678 on 22/10/2026 07:28:00. Your transaction number is  CJK2NB5Q4T. Your current balance is ETB 1,234.50.To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/CJK2NB5Q4T\nThank you for using telebirr\nEthio telecom',
+    ),
+    expect: {
+      source: 'telebirr',
+      type: 'debit',
+      amountMinor: 5000,
+      merchant: 'Ethio telecom',
+      reference: 'CJK2NB5Q4T',
+      category: 'bills',
+    },
+  },
+  {
+    name: 'telebirr payment with a note after the payee',
+    sms: sms(
+      '127',
+      new Date(2026, 9, 21, 9, 40, 0),
+      'Dear Abebe\nYou have paid ETB 120.00 to Sample Rides PLC; Driver number 251911223344 on 21/10/2026 09:40:00. Your transaction number is CJL3PC6R5U. Your current balance is ETB 1,114.50.To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/CJL3PC6R5U\nThank you for using telebirr',
+    ),
+    expect: {
+      source: 'telebirr',
+      type: 'debit',
+      amountMinor: 12000,
+      merchant: 'Sample Rides PLC',
+      reference: 'CJL3PC6R5U',
+    },
+  },
+  {
+    name: 'telebirr airtime recharge',
+    sms: sms(
+      '127',
+      new Date(2026, 9, 4, 21, 10, 38),
+      'Dear Abebe\nYou have recharged ETB 100.00 airtime for 912345678 on 04/10/2026 21:10:38. Your transaction number is CJM4QD7S6V. Your current  balance is  ETB 300.00. To download your payment information please click this link: https://transactioninfo.ethiotelecom.et/receipt/CJM4QD7S6V\nThank you for using telebirr\nEthio telecom',
+    ),
+    expect: {
+      source: 'telebirr',
+      type: 'debit',
+      amountMinor: 10000,
+      merchant: 'Ethio telecom',
+      reference: 'CJM4QD7S6V',
+      category: 'bills',
+    },
+  },
+  {
+    name: 'CBE debit transaction with fees',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 20, 15, 0, 0),
+      'Dear Abebe Kebede A debit transaction of ETB 600.0. has occurred on your account 1****6789. Service charge of ETB 10.00 and VAT(15%) of ETB1.50 and Disaster Recovery(5%) of 0.50 with total of ETB612.00 .Your current balance is ETB40.00. Thanks for Banking with CBE. https://mbreciept.cbe.com.et/v2-AbCdEfGhIjKlMnOp  for feedback: https://forms.gle/example',
+    ),
+    expect: { source: 'CBE', type: 'debit', amountMinor: 60000, merchant: null },
+  },
+  {
+    name: 'BOA debit in Amharic',
+    sms: sms(
+      'BOA',
+      new Date(2026, 9, 20, 10, 0, 0),
+      'ውድ ደንበኛችን  ከሂሳብ ቁጥርዎ 1*23 ብር 1,250.00 ወጪ ተደርጓል።ቀሪ ሂሳብዎ: ETB 80.00። ደረሰኝ: https://cs.bankofabyssinia.com/slip/?trx=FT26293ABCD12345\nእባክዎ አስተያየትዎን ይስጡን: https://cs.bankofabyssinia.com/cs/?trx=DFT26293ABCD1 ለተጨማሪ መረጃ በነፃ ስልክ ቁጥር 8397 (24/7) ይደውሉ፡፡አቢሲንያ ባንክ',
+    ),
+    expect: {
+      source: 'BOA',
+      type: 'debit',
+      amountMinor: 125000,
+      reference: 'FT26293ABCD12345',
+    },
+  },
+  {
+    name: 'e-Birr received from a business',
+    sms: sms(
+      'e-Birr',
+      new Date(2026, 9, 19, 9, 5, 9),
+      '[-EBIRR-KAAFI-] Ref:802641600000 Confirmed. ETB350 Received from Sample Transport PLC (251911000000),Date: 19/10/26 09:05:09, your new A/C balance is ETB420\nhttps://receipt.ebirr.com/kaafimf/AbCdEf',
+    ),
+    expect: {
+      source: 'e-Birr',
+      type: 'credit',
+      amountMinor: 35000,
+      merchant: 'Sample Transport PLC',
+      reference: '802641600000',
+    },
+  },
+  {
+    name: 'BOA credit in Amharic',
+    sms: sms(
+      'BOA',
+      new Date(2026, 9, 19, 12, 0, 0),
+      'ውድ ደንበኛችን  ወደ ሂሳብ ቁጥርዎ 1*23 ከ ALMAZ BEKELE  ብር 750.00 ገቢ ተደርጓዋል።ቀሪ ሂሳብዎ: ETB 830.00። ደረሰኝ: https://cs.bankofabyssinia.com/slip/?trx=FT26292ABCD98765\nእባክዎ አስተያየትዎን ይስጡን: https://cs.bankofabyssinia.com/cs/?trx=CFT26292ABCD ለተጨማሪ መረጃ በነፃ ስልክ ቁጥር 8397 (24/7) ይደውሉ፡፡አቢሲንያ ባንክ',
+    ),
+    expect: {
+      source: 'BOA',
+      type: 'credit',
+      amountMinor: 75000,
+      merchant: 'ALMAZ BEKELE',
+      reference: 'FT26292ABCD98765',
+      category: 'income',
+    },
+  },
+  {
+    name: 'M-PESA received from CBE, in Amharic',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 7, 31, 20, 36, 0),
+      'ውድ Abebe፣ 600.00 ብር ከ Commercial Bank Of Ethiopia-B2C  ፟- ከ Abebe Kebede  በ 31/8/26 በ 8:36 PM ላይ ተቀብለዋል። የገንዘብ ዝውውር መለያ ቁጥር UHV0ABCDEF ነው። የእርስዎ አሁን ያለው የM-PESA ቀሪ ሒሳብ 600.00 ብር ነው። https://m-pesabusiness.safaricom.et/nid/login',
+    ),
+    expect: {
+      source: 'M-PESA',
+      type: 'credit',
+      amountMinor: 60000,
+      merchant: 'Commercial Bank Of Ethiopia-B2C',
+      reference: 'UHV0ABCDEF',
+      category: 'transfers',
+    },
+  },
+  {
+    name: 'e-Birr paid to a merchant',
+    sms: sms(
+      'e-Birr',
+      new Date(2026, 9, 18, 8, 0, 0),
+      '[-Kaafi-Ebirr-] ETB 400 has been paid to merchant Sample Taxi.\nhttps://receipt.ebirr.com/kaafimf/AbCdEf',
+    ),
+    expect: {
+      source: 'e-Birr',
+      type: 'debit',
+      amountMinor: 40000,
+      merchant: 'Sample Taxi',
+      category: 'transport',
+    },
+  },
+  {
+    name: 'CBE credited by a company',
+    sms: sms(
+      'CBE',
+      new Date(2026, 8, 28, 10, 0, 0),
+      'Dear Mr Abebe your Account 1****6789 has been credited by SAMPLE INSURANCE COMPANY S.C (SIC) with ETB 1200.00. Your Current Balance is ETB 1250.50. Thank you for Banking with CBE! for Reciept https://apps.cbe.com.et:100/BranchReceipt/FT26271ABCDE&90612345',
+    ),
+    expect: {
+      source: 'CBE',
+      type: 'credit',
+      amountMinor: 120000,
+      merchant: 'SAMPLE INSURANCE COMPANY S.C',
+      reference: 'FT26271ABCDE',
+      category: 'income',
+    },
+  },
+  {
+    name: 'M-PESA Safaricom package in Amharic',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 9, 6, 17, 31, 0),
+      'ውድ Abebe፣ የ1,000.00 ብር የሳፋሪኮም ጥቅል ለ 251711000000 በ6/10/26 በ5:31 PM ላይ ገዝተዋል። የገንዘብ ዝውውር መለያ ቁጥር UJ63ABCDEF ነው። የአገልግሎት ክፍያ 0.00 ብር ነው። አሁን ያለዎት የM-PESA ቀሪ ሒሳብ 250.00 ብር ነው። ደረሰኝዎን በዚህ ያግኙ፡ https://m-pesabusiness.safaricom.et/receipt/UJ63ABCDEF',
+    ),
+    expect: {
+      source: 'M-PESA',
+      type: 'debit',
+      amountMinor: 100000,
+      merchant: 'Safaricom',
+      reference: 'UJ63ABCDEF',
+      category: 'bills',
+    },
+  },
+  {
+    name: 'M-PESA airtime in Amharic, with an ad after it',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 9, 4, 5, 41, 0),
+      'ውድ Abebe፣ የ5.00 ብር የአየር ሰዓት ለራስዎ ስልክ በ4/10/26 5:41 AM ላይ ገዝተዋል። የገንዘብ ዝውውር መለያ ቁጥር UJ43ABCDEF ነው። የአገልግሎት ክፍያ 0.00 ብር ነው። አሁን ያልዎት የM-PESA ቀሪ ሒሳብ 120.00 ብር ነው። በ M-PESA የ 5 ብር እለታዊ 100 ሜ.ባ የኢንተርኔት ጥቅል  ሲገዙ ተጨማሪ 20 ሜ.ባ ያግኙ::  ለመግዛት ማስፈንጠሪያውን ይጫኑ  https://bit.ly/example',
+    ),
+    expect: {
+      source: 'M-PESA',
+      type: 'debit',
+      amountMinor: 500,
+      merchant: 'Safaricom',
+      reference: 'UJ43ABCDEF',
+      category: 'bills',
+    },
+  },
+  {
+    name: 'BOA loan ad in Amharic',
+    sms: sms(
+      'BOA',
+      new Date(2026, 9, 10, 9, 0, 0),
+      'ብድር ተገኝቷል!\n\nውድ ደንበኛችን የሞባይል ባንኪንግ መተግበሪያችንን በመጠቀም  ወዲያውኑ  አነስተኛ ብድር ይውሰዱ ። የሂሳብ እንቅስቃሴዎ ሲያድግ እና በተደጋጋሚ ሲበደሩ የመበደር አቅምዎ እስከ ብር 100,000 ያድጋል።\nለአንድሮይድ:\nhttps://play.google.com/store/apps/details?id=com.example',
+    ),
+    expect: { ignored: 'promo' },
+  },
+  {
+    name: 'digital lending ad',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 11, 9, 0, 0),
+      'Sample Digital Lending\nFast Money - Easy Access!\nAre you engaged in a business? Then, Download Sample Digital Lending App and access instant, collateral free loans at your fingertips. With repeated use, your limit will grow up to Birr 100,000.\nFor more information, call at 9999',
+    ),
+    expect: { ignored: 'promo' },
+  },
+  {
     name: 'telebirr received from CBE',
     sms: sms(
       '127',

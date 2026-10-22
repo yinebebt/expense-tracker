@@ -19,11 +19,11 @@ npm test -- --watch=false     # unit tests (Vitest)
 
 ## Run
 
-| Where | How |
-| --- | --- |
-| Browser | `npm start` → <http://localhost:4200>. UI and SQLite work (jeep-sqlite); SMS reading doesn't. |
-| Emulator | `$ANDROID_HOME/emulator/emulator -avd expense_pixel &`, then `npm run android` |
-| Phone | USB debugging on, plug in, accept the prompt, then `npm run android` |
+| Where    | How                                                                                           |
+| -------- | --------------------------------------------------------------------------------------------- |
+| Browser  | `npm start` → <http://localhost:4200>. UI and SQLite work (jeep-sqlite); SMS reading doesn't. |
+| Emulator | `$ANDROID_HOME/emulator/emulator -avd expense_pixel &`, then `npm run android`                |
+| Phone    | USB debugging on, plug in, accept the prompt, then `npm run android`                          |
 
 `adb devices` shows what's connected. With more than one device, pass `-- --target <id>` and set `ANDROID_SERIAL=<id>` so the `adb` calls hit the right one.
 
@@ -61,9 +61,12 @@ Both are signed with the release key when `android/keystore.properties` exists, 
 
 ### Releasing a beta
 
-1. Bump `versionCode` and `versionName` in `android/app/build.gradle` (and `version` in `package.json`).
+1. Bump `versionCode` (must go up) and `versionName` in `android/app/build.gradle`, and `npm version <x.y.z> --no-git-tag-version`.
 2. `npm run apk:release`, then copy the APK somewhere shareable, e.g. `~/Downloads/expense-tracker-<version>.apk`.
-3. Testers install over the previous version and keep their data.
+3. Commit and tag `v<x.y.z>`.
+4. Testers install over the previous version and keep their data.
+
+**Icon:** edit `resources/icon.svg` and `resources/icon-foreground.svg`, then `./resources/render-icons.sh` (needs `rsvg-convert` and ImageMagick).
 
 **Signing key:** `~/.android/expense-tracker-release.jks`, password in `android/keystore.properties`; both git-ignored. Back them up. Without the key, no update can be installed over existing copies.
 
@@ -87,21 +90,24 @@ src/app/
     transaction.service.ts import pipeline, payee rules, signals the pages read
     sms-reader.service.ts  SmsReader interface + Android implementation of the native plugin
     sms-sync.service.ts    when and from where to read the inbox
-  components/        transaction row, week column chart, category bar
+  components/        transaction row, week chart, category bar, transaction and payee detail cards
   pages/             tabs (Dashboard, Transactions, Payees), Settings
 android/app/src/main/java/com/yinebebt/expenses/
-  SmsInboxPlugin.kt  inbox query filtered to known senders, unrecognised-sender list, change observer, app settings
+  SmsInboxPlugin.kt  inbox query and get-by-id, both limited to known senders; unrecognised-sender list; change observer; app settings
+resources/           icon source SVGs and render-icons.sh
 ```
 
 ## How it behaves
 
 - **Permissions:** only `READ_SMS`. The native side filters by sender, so other SMS never reach the app code. Android backup is off.
 - **Sync:** the first sync reads the last 90 days. Later syncs read from the newest message already seen. Syncs run on launch, on resume, when the SMS store changes while the app is open, on pull-to-refresh, and from Settings. Nothing runs while the app is closed.
-- **Unclear messages:** reversals, refunds and unrecognised formats with an amount are stored for review and never counted. Only those rows keep the SMS text, which testers can copy from the Transactions list.
+- **Unclear messages:** reversals, refunds and unrecognised formats with an amount are stored for review and never counted. Only those rows keep the SMS text; for other rows the detail card reads the original SMS from the inbox by id. Either can be copied from the card.
+- **Ads:** dropped only on signals real transactions don't carry ("download … app", app-store links, "up to Birr", win/prize wording), and only when no transaction pattern matched.
+- **Re-read:** "Re-read last 90 days" refreshes stored rows with the current parser, keeps categories set by hand, replaces review rows that now parse and removes those that are now ads.
 - **Own transfers:** moves between the user's own accounts are left out of spending, income and Payees, and shown once on the Dashboard ("Moved between your accounts"). They're detected three ways:
   - a debit and a same-amount credit on two different sources within 10 minutes;
   - a counterparty that is a bank or wallet by name;
   - a payee the user marked as Own transfers.
 - **Payees:** transactions are grouped by counterparty name, ignoring case and a trailing masked number. A category set on a payee goes into `payee_rules`; it updates their existing transactions and applies to new SMS. Rules survive "Delete all transactions".
-- **Charts:** inline SVG/HTML, no chart library. Category colors are fixed per category in `styles.scss`, validated for light and dark surfaces. The category legend doubles as the table, and the week chart has a List view.
-- **Parsing:** sender IDs and formats for most banks are guesses until checked against real SMS. Settings → "Bank missing?" lists unrecognised business senders, names only.
+- **Charts:** inline SVG/HTML, no chart library. Category colors are fixed per category in `styles.scss`, validated for light and dark surfaces. The category legend doubles as the table, and the week chart has a List view. Tapping a day shows that day's expenses under it.
+- **Parsing:** English and Amharic wording; Amharic "ብር" amounts are rewritten to "ETB" first. Sender IDs and formats for most banks are guesses until checked against real SMS. Settings → "Find a missing bank" lists unrecognised business senders, names only.

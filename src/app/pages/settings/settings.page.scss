@@ -1,5 +1,8 @@
-.actions {
-  padding: 8px 16px 16px;
-  display: grid;
-  gap: 8px;
+// No tab bar here, so keep the last row clear of the system navigation bar.
+ion-content {
+  --padding-bottom: var(--ion-safe-area-bottom, 0px);
+}
+
+.action {
+  color: var(--ion-color-primary);
 }

@@ -3,6 +3,7 @@ import { Category, RawSms, Transaction, TxType } from '../models/transaction.mod
 import { categorize } from './categorize';
 import { dedupKey } from './dedup';
 import {
+  AMHARIC_CURRENCY,
   ANY_AMOUNT,
   BALANCE_PHRASE,
   OTP,
@@ -61,6 +62,7 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
     .slice(0, MAX_BODY)
     .replace(/\s+/g, ' ')
     .replace(TRAILING_CURRENCY, 'ETB $1')
+    .replace(AMHARIC_CURRENCY, (_, trailing?: string) => (trailing ? `ETB ${trailing}` : 'ETB '))
     .trim();
   if (OTP.test(body)) return { kind: 'ignored', reason: 'otp' };
 
@@ -90,7 +92,7 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
     const { p, m } = matches[0];
     const amountMinor = parseAmountMinor(m!.groups!['amount']);
     if (amountMinor !== null && amountMinor > 0) {
-      const merchant = cleanParty(p.party?.exec(body)?.groups?.['party']);
+      const merchant = p.merchant ?? cleanParty(p.party?.exec(body)?.groups?.['party']);
       return {
         kind: 'parsed',
         tx: {
@@ -158,7 +160,10 @@ function cleanParty(s: string | undefined): string | null {
     ?.replace(/\s+/g, ' ')
     .replace(/\s+\+?[\d*]{6,}$/, '') // trailing masked phone or account number
     .trim();
-  // "to your account", "from your wallet" and the like name no one.
-  if (!t || /^(your|you|the|a|an|my)\b/i.test(t)) return null;
-  return t.slice(0, 80);
+  // "to your account", "from your wallet", "to account 1000…" and the like name no one.
+  if (!t || /^(your|you|the|a|an|my|account|acc(?:t|ount)? ?no)\b/i.test(t)) return null;
+  // "To download your payment information please click this link: https://…"
+  if (/https?:\/\/|\bclick\b/i.test(t)) return null;
+  // "paid to merchant Feres"
+  return t.replace(/^merchant\s+/i, '').slice(0, 80);
 }

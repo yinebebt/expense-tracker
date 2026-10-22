@@ -4,7 +4,6 @@ import { App } from '@capacitor/app';
 import {
   AlertController,
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
@@ -13,6 +12,7 @@ import {
   IonList,
   IonListHeader,
   IonNote,
+  IonProgressBar,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular';
@@ -43,7 +43,7 @@ const ACCESS_TEXT = {
     IonItem,
     IonLabel,
     IonNote,
-    IonButton,
+    IonProgressBar,
   ],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
@@ -54,7 +54,8 @@ export class SettingsPage {
   protected readonly sync = inject(SmsSyncService);
 
   protected readonly windowDays = IMPORT_WINDOW_DAYS;
-  protected readonly supported = SOURCES.map((s) => s.source).join(', ');
+  protected readonly supported = SOURCES.map((s) => s.source);
+  protected readonly showSupported = signal(false);
   protected readonly count = computed(() => this.txService.transactions().length);
   protected readonly busy = signal(false);
   protected readonly version = signal('');
@@ -94,7 +95,7 @@ export class SettingsPage {
   protected async confirmClear(): Promise<void> {
     const alert = await this.alerts.create({
       header: 'Delete all transactions?',
-      message: `This removes all stored transactions. The next check re-reads the last ${IMPORT_WINDOW_DAYS} days of SMS still in your inbox. Categories set on a payee are kept; changes to single transactions are lost.`,
+      message: `The next check re-reads the last ${IMPORT_WINDOW_DAYS} days of SMS. Payee categories are kept; categories set on single transactions are lost.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Delete', role: 'destructive', handler: () => this.clear() },

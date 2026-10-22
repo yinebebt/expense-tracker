@@ -9,7 +9,10 @@ export interface TxPattern {
   type: 'debit' | 'credit';
   /** Must capture a named `amount` group. */
   match: RegExp;
-  /** Optional; captures a named `party` group (merchant, payee or payer). */
+  /**
+   * Optional; captures the merchant, payee or payer as a named `party` group, or as
+   * `holder` when it's an account holder's name in brackets.
+   */
   party?: RegExp;
   /** Fixed category for this pattern, e.g. airtime purchases. */
   category?: Category;
@@ -30,8 +33,19 @@ export interface SourceRule {
 const AMOUNT = String.raw`\b(?:ETB|Birr|Br)\.?\s?(?<amount>\d[\d,]*(?:\.\d{1,2})?)`;
 const re = (pattern: string) => new RegExp(pattern, 'i');
 
-const PARTY_TO = /\bto (?<party>[^.(;]+?)\s*(?:\(|;|\bon\b|\.)/i;
-const PARTY_FROM = /\bfrom (?<party>[^.,(]+?)\s*(?:\(|,|\bon\b|\.)/i;
+// CBE names the other side in brackets after a masked account number:
+// "to account 1****9999 (Abebe Kebede)", "from account 1****9999 (A.a City Agency)".
+// The bracketed name may contain dots, so it gets its own group.
+const HELD = String.raw`account\s+[\d*]+\s*\((?<holder>[^)]+)\)`;
+const PARTY_TO = new RegExp(
+  String.raw`\bto (?:${HELD}|(?<party>[^.(;]+?)\s*(?:\(|;|\bon\b|\.))`,
+  'i',
+);
+const PARTY_FROM = new RegExp(
+  // telebirr: "from Bank of Abyssinia to your telebirr Account 2519… - <your name>."
+  String.raw`\bfrom (?:${HELD}|(?<party>[^.,(]+?)\s*(?:\(|,|\bon\b|\bto your\b|\.))`,
+  'i',
+);
 /** Amharic "ከ X" (from X), ending at the amount, a "-" separator, "በ" (on) or the sentence end. */
 const PARTY_FROM_AM = /(?:^|\s)ከ\s+(?<party>[^።]+?)\s*(?:\bETB\b|፟|\s-\s|\sበ\s|።)/;
 
@@ -121,7 +135,18 @@ export const SOURCES: SourceRule[] = [
   bank('CBE', 'CBE'),
   bank('Awash', 'AwashBank', 'Awash'),
   bank('Dashen', 'DashenBank', 'Dashen'),
-  bank('BOA', 'BOA', 'Abyssinia', 'BankofAbyssinia'),
+  {
+    source: 'BOA',
+    senders: ['BOA', 'Abyssinia', 'BankofAbyssinia'],
+    patterns: [
+      {
+        // "debited with ETB 9.99 for the Mobile Banking Monthly Maintenance Fee, including …"
+        type: 'debit',
+        match: re(String.raw`\bdebited with\s+` + AMOUNT + String.raw`\s+for the\b`),
+        party: /\bfor the (?<party>[^,.]+)/i,
+      },
+    ],
+  },
   bank('Coopbank', 'Coopbank', 'COOP', 'CBO'),
   bank('Wegagen', 'WegagenBank', 'Wegagen'),
   bank('Hibret', 'HibretBank', 'Hibret', 'UnitedBank'),
@@ -182,6 +207,15 @@ export const SOURCES: SourceRule[] = [
         category: 'bills',
       },
       { type: 'debit', match: re(AMOUNT + String.raw`[^።]*?ገዝተዋል`) },
+      // "99.99 ብር ለ2519… በ … ልከዋል" = sent to a number.
+      { type: 'debit', match: re(AMOUNT + String.raw`\s+ለ\s?[^።]*?ልከዋል`) },
+      {
+        // Cashback: "በM-PESA በኩል ስለከፈሉ 9.99 ብር ተመላሽ ገንዘብ ተቀብለዋል" (received money back for paying).
+        type: 'credit',
+        match: re(AMOUNT + String.raw`\s+ተመላሽ ገንዘብ ተቀብለዋል`),
+        merchant: 'M-PESA cashback',
+        category: 'income',
+      },
     ],
   },
   bank('CBE Birr', 'CBE Birr'),
@@ -197,16 +231,18 @@ export const OTP = /\b(OTP|one[- ]time (?:password|code)|verification code|secur
 export const REVERSAL = /\b(revers(?:ed|al)|refund(?:ed)?)\b/i;
 
 /**
- * Promotional wording. Only checked when no transaction pattern matched, and kept to
- * signals real transactions don't carry: an unparsed transaction belongs in review,
- * not silently dropped.
+ * Ads and notices that move no money. Only checked when no transaction pattern matched,
+ * and kept to signals real transactions don't carry: an unparsed transaction belongs in
+ * review, not silently dropped.
  */
 export const PROMO = new RegExp(
   String.raw`\b(?:offer|promo(?:tion)?|win|winners?|cashback|discount|bonus|lottery|dial \*\d+|up to (?:ETB|Birr))\b` +
     // "Download Sample Lending App" but not telebirr's "To download your payment information".
     String.raw`|\bdownload\s+(?:\S+\s+){0,4}app\b|play\.google\.com|apps\.apple\.com` +
-    // Amharic: prize, win, discount, "up to birr" (ብር is rewritten to ETB first).
-    String.raw`|ሽልማት|ያሸንፉ|ቅናሽ|እስከ ETB`,
+    // Amharic: prize, win, discount, bonus, "up to birr" (ብር is rewritten to ETB first).
+    String.raw`|ሽልማት|ያሸንፉ|ቅናሽ|ጉርሻ|እስከ ETB` +
+    // M-PESA Errif (overdraft loan) reminders and limit notices; they move no money.
+    String.raw`|ዕርፍ|እርፍ|\bErrif\b`,
   'i',
 );
 

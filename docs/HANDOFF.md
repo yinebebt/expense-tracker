@@ -4,9 +4,9 @@ State at the end of the second session, for whoever picks this up next.
 
 ## Where it stands
 
-**Version:** 0.1.5 (versionCode 5), tag `v0.1.5`. The release APK is at `~/Downloads/expense-tracker-0.1.5.apk`. Earlier betas were named 0.3.0-beta (versionCode 4, tag `v0.1.0`); 0.1.5 installs over them because only the versionCode has to go up.
+**Version:** 0.1.8, build 3, tag `v0.1.8`. The release APK is at `~/Downloads/expense-tracker-0.1.8.apk`. Version and build number live in `package.json` (`version`, `versionCode`) and are bumped together by `npm version <x.y.z> --no-git-tag-version`; the build number counts release tags (v0.1.0 = 1, v0.1.5 = 2, v0.1.8 = 3). The v0.1.0 and v0.1.5 commits still say 4 and 5, so a phone with one of those builds has to uninstall before installing 0.1.8, which clears its data.
 
-**Tests:** 84 unit tests pass (`npm test -- --watch=false`). The production build is clean.
+**Tests:** 93 unit tests pass (`npm test -- --watch=false`). The production build is clean.
 
 **Verified on the owner's phone** (Samsung Galaxy A15, Android 16, real SMS):
 
@@ -23,7 +23,7 @@ State at the end of the second session, for whoever picks this up next.
   - one day at a time: heading (Today, Yesterday or the weekday), its total with an eye toggle that masks it, the Mon–Sun chart, then that day's expenses. Tapping a bar switches the day; it starts on today;
   - the month: total, received, category stacked bar with legend, "Moved between your accounts";
   - the review count.
-- **Transactions:** search, grouped by day with each day's spent total; `?q=` filter from other screens.
+- **Transactions:** search, grouped by day with each day's spent total; `?q=` filter from other screens. A row whose SMS names no one is titled "Money out" / "Money in", never with the bank's name.
 - **Transaction detail** (tap any row): a small card with amount, payee, category dropdown, date, reference and the original SMS. The SMS is read from the inbox by id when the card opens (`SmsInbox.get`, known senders only), not stored.
 - **Payees:** grouped by name, All / 5+ filters, own accounts listed apart. Tapping one opens a small card with totals, a category dropdown that applies to all their transactions and new ones, and "Show transactions".
 - **Settings:** one row per item: SMS access, last check, check now, re-read 90 days, supported banks, find a missing bank, per-bank counts, delete all, version.
@@ -33,13 +33,14 @@ State at the end of the second session, for whoever picks this up next.
 ## Known gaps and risks (most important first)
 
 1. **Parsers have seen few real SMS.** Real formats covered so far:
-   - telebirr: package purchase, airtime recharge, "paid … to X; note";
-   - CBE: "debit transaction of", "credited by X with ETB …";
+   - telebirr: package purchase, airtime recharge, "paid … to X; note", "received … from <bank> to your telebirr Account";
+   - CBE: "transferred … to account 1***9 (Name)" and "received … from account 1***9 (Name)" (the name is in brackets), "debit transaction of" and branch "credited with" (these name no one), "credited by X with ETB …";
    - BOA in Amharic: ብር … ወጪ/ገቢ ተደርጓል (debit/credit, spelled more than one way);
-   - M-PESA in Amharic: ከ X … ተቀብለዋል (received), airtime/package ገዝተዋል (bought);
+   - M-PESA in Amharic: ከ X … ተቀብለዋል (received), airtime/package ገዝተዋል (bought), ለ<number> … ልከዋል (sent), cashback; Errif loan notices are ignored;
+   - BOA in English: Mobile Banking maintenance fee;
    - e-Birr: "ETB… Received from X", "has been paid to merchant X".
 
-   Sender IDs other than CBE, telebirr (`127`), BOA, M-PESA and e-Birr are guesses. The way forward is the same: take a redacted real sample, add it to `parsing/fixtures/fictional-sms.ts`, adjust `rules.ts` until it passes, then re-read on the phone.
+   A run over the owner's 90-day inbox (412 bank SMS) left 37 CBE and 10 BOA rows without a payee; those messages name no one. Sender IDs other than CBE, telebirr (`127`), BOA, M-PESA and e-Birr are guesses. The way forward is the same: take a redacted real sample, add it to `parsing/fixtures/fictional-sms.ts`, adjust `rules.ts` until it passes, then re-read on the phone.
 
 2. **Fees are ignored** (telebirr service fee, CBE service charge and VAT). Only the principal is recorded.
 3. **Review rows can't be turned into a debit or credit** by hand. They're never counted; a parser fix plus re-read is the only way out.

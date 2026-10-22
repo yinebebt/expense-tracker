@@ -92,7 +92,8 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
     const { p, m } = matches[0];
     const amountMinor = parseAmountMinor(m!.groups!['amount']);
     if (amountMinor !== null && amountMinor > 0) {
-      const merchant = p.merchant ?? cleanParty(p.party?.exec(body)?.groups?.['party']);
+      const party = p.party?.exec(body)?.groups;
+      const merchant = p.merchant ?? cleanParty(party?.['holder'] ?? party?.['party']);
       return {
         kind: 'parsed',
         tx: {
@@ -161,7 +162,8 @@ function cleanParty(s: string | undefined): string | null {
     .replace(/\s+\+?[\d*]{6,}$/, '') // trailing masked phone or account number
     .trim();
   // "to your account", "from your wallet", "to account 1000…" and the like name no one.
-  if (!t || /^(your|you|the|a|an|my|account|acc(?:t|ount)? ?no)\b/i.test(t)) return null;
+  // Needs a space or the end after the word, so "A.a City Agency" stays a name.
+  if (!t || /^(?:your|you|the|a|an|my|account|acc(?:t|ount)? ?no)(?:\s|$)/i.test(t)) return null;
   // "To download your payment information please click this link: https://…"
   if (/https?:\/\/|\bclick\b/i.test(t)) return null;
   // "paid to merchant Feres"

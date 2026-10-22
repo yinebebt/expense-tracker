@@ -61,8 +61,10 @@ Both are signed with the release key when `android/keystore.properties` exists, 
 
 ### Releasing a beta
 
-1. Bump `versionCode` (must go up) and `versionName` in `android/app/build.gradle`, and `npm version <x.y.z> --no-git-tag-version`.
-2. `npm run apk:release`, then copy the APK somewhere shareable, e.g. `~/Downloads/expense-tracker-<version>.apk`.
+The version lives in `package.json` only: `version` (shown to people) and `versionCode` (the Android build number, one per release tag: v0.1.8 is 3). `android/app/build.gradle` reads both. Android only installs over an existing copy when `versionCode` is higher.
+
+1. `npm version <x.y.z> --no-git-tag-version` sets the version and adds 1 to `versionCode` (`scripts/bump-build.mjs`).
+2. `npm run apk:release`, then copy the APK somewhere shareable, e.g. `~/Downloads/expense-tracker-<x.y.z>.apk`.
 3. Commit and tag `v<x.y.z>`.
 4. Testers install over the previous version and keep their data.
 

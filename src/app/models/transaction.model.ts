@@ -57,3 +57,11 @@ export interface RawSms {
   /** Epoch ms. */
   date: number;
 }
+
+/** A row's title: the payee, or what happened when the SMS names no one. Never the bank. */
+export function txTitle(t: Pick<Transaction, 'merchant' | 'type'>): string {
+  if (t.merchant) return t.merchant;
+  if (t.type === 'debit') return 'Money out';
+  if (t.type === 'credit') return 'Money in';
+  return 'Unrecognised SMS';
+}

@@ -1,6 +1,7 @@
 {
   "name": "expense-tracker",
-  "version": "0.1.5",
+  "version": "0.1.8",
+  "versionCode": 3,
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -10,7 +11,8 @@
     "android": "ng build && cap run android",
     "android:live": "adb reverse tcp:4200 tcp:4200 && cap run android --live-reload --host localhost --port 4200 --forwardPorts 4200:4200",
     "apk": "ng build && cap sync android && cd android && ./gradlew assembleDebug -q",
-    "apk:release": "ng build && cap sync android && cd android && ./gradlew assembleRelease -q"
+    "apk:release": "ng build && cap sync android && cd android && ./gradlew assembleRelease -q",
+    "version": "node scripts/bump-build.mjs"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

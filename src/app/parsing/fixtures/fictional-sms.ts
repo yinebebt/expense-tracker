@@ -387,6 +387,98 @@ export const FIXTURES: Fixture[] = [
     expect: { ignored: 'promo' },
   },
   {
+    name: 'CBE transfer naming the account holder in brackets',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 20, 11, 0, 0),
+      'Dear Abebe Kebede You have successfully transferred ETB1500.00 from account 1********6789 to account 1********4321 (A.a .city.adm.sample Agency). Service charge of ETB 2.00 and VAT(15%) of ETB0.30 and Disaster Recovery(5%) of 0.10 with total of ETB1502.40 .Your current balance is ETB300.00. Thanks for Banking with CBE.',
+    ),
+    expect: {
+      source: 'CBE',
+      type: 'debit',
+      amountMinor: 150000,
+      merchant: 'A.a .city.adm.sample Agency',
+    },
+  },
+  {
+    name: 'CBE received naming the account holder in brackets',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 20, 12, 0, 0),
+      'Dear Abebe Kebede You have received ETB 800.00 from account 1********4321 (Almaz Bekele Tesfaye) to your account 1********6789. Your current balance is ETB1,100.00. Thanks for Banking with CBE.',
+    ),
+    expect: {
+      source: 'CBE',
+      type: 'credit',
+      amountMinor: 80000,
+      merchant: 'Almaz Bekele Tesfaye',
+      category: 'income',
+    },
+  },
+  {
+    name: 'telebirr received from a bank into your own telebirr',
+    sms: sms(
+      '127',
+      new Date(2026, 9, 20, 13, 0, 0),
+      'You have received  ETB 2,000.00 by transaction number CJP6SF9U8X on 2026-10-20 13:00:00 from Bank of Abyssinia to your telebirr Account 251911223344 - Abebe Kebede. Your current balance is ETB 2,100.00.',
+    ),
+    expect: {
+      source: 'telebirr',
+      type: 'credit',
+      amountMinor: 200000,
+      merchant: 'Bank of Abyssinia',
+      category: 'transfers',
+    },
+  },
+  {
+    name: 'M-PESA sent to a number, in Amharic',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 8, 9, 21, 0, 0),
+      'ውድ Abebe፣ 50.00 ብር ለ251711000000 በ 9/9/26 በ9:00 PM ላይ ልከዋል። የገንዘብ ዝውውር መለያ ቁጥር UI90ABCDEF ነው። የአገልግሎት ክፍያ 0.00 ብር ነው። አሁን ያልዎት የM-PESA ቀሪ ሒሳብ 100.00 ብር ነው።',
+    ),
+    expect: { source: 'M-PESA', type: 'debit', amountMinor: 5000, reference: 'UI90ABCDEF' },
+  },
+  {
+    name: 'M-PESA cashback, in Amharic',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 8, 10, 9, 0, 0),
+      'እንኳን ደስ አለዎት፣ በM-PESA በኩል ስለከፈሉ 10.00 ብር ተመላሽ ገንዘብ ተቀብለዋል።',
+    ),
+    expect: {
+      source: 'M-PESA',
+      type: 'credit',
+      amountMinor: 1000,
+      merchant: 'M-PESA cashback',
+      category: 'income',
+    },
+  },
+  {
+    name: 'M-PESA loan reminder is not a transaction',
+    sms: sms(
+      'M-PESA',
+      new Date(2026, 8, 11, 9, 0, 0),
+      'አንድ ቀን ብቻ ነው የቀረው! የ እርፍ/Errif 200.00 ብር ብድርዎን ዛሬ ይክፈሉ እና ምንም አይነት ዕለታዊ የወለድ ክፍያ አያስከፍልዎትም።',
+    ),
+    expect: { ignored: 'promo' },
+  },
+  {
+    name: 'BOA maintenance fee',
+    sms: sms(
+      'BOA',
+      new Date(2026, 9, 1, 8, 0, 0),
+      'Dear Abebe, your account 1*****23 was debited with ETB 5.75 for the Mobile Banking Monthly Maintenance Fee, including 15% VAT and 5% Disaster Fund. Available balance: ETB 90.00. Receipt: https://cs.bankofabyssinia.com/slip/?trx=FT26274ABCDE12345',
+    ),
+    expect: {
+      source: 'BOA',
+      type: 'debit',
+      amountMinor: 575,
+      merchant: 'Mobile Banking Monthly Maintenance Fee',
+      reference: 'FT26274ABCDE12345',
+    },
+  },
+  {
     name: 'telebirr received from CBE',
     sms: sms(
       '127',

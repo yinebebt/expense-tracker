@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, input, output } from '@angular/core';
 import { IonItem, IonLabel, IonNote } from '@ionic/angular';
 import { formatMinor } from '../models/money';
-import { CATEGORY_LABELS, Transaction } from '../models/transaction.model';
+import { CATEGORY_LABELS, Transaction, txTitle } from '../models/transaction.model';
 
 @Component({
   selector: 'app-tx-item',
@@ -10,11 +10,9 @@ import { CATEGORY_LABELS, Transaction } from '../models/transaction.model';
   template: `
     <ion-item [button]="clickable()" [detail]="false" (click)="clickable() && picked.emit(tx())">
       <ion-label>
-        <h3>{{ tx().merchant ?? tx().source }}</h3>
+        <h3 [class.unnamed]="!tx().merchant">{{ title() }}</h3>
         <p>
-          @if (tx().merchant) {
-            {{ tx().source }} ·
-          }
+          {{ tx().source }} ·
           @if (tx().needsReview) {
             <span class="review">Needs review</span> ·
           } @else {
@@ -35,6 +33,9 @@ import { CATEGORY_LABELS, Transaction } from '../models/transaction.model';
     .amount:not(.ion-color) {
       color: var(--ion-text-color);
     }
+    h3.unnamed {
+      color: var(--viz-muted);
+    }
     .review {
       color: var(--ion-color-warning-shade);
       font-weight: 500;
@@ -47,6 +48,8 @@ export class TxItemComponent {
   /** 'HH:mm' where the list is already one day. */
   readonly dateFormat = input('EEE d MMM, HH:mm');
   readonly picked = output<Transaction>();
+
+  protected readonly title = computed(() => txTitle(this.tx()));
 
   protected readonly category = computed(() => {
     const c = this.tx().category;

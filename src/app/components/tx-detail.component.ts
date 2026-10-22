@@ -31,7 +31,9 @@ import { isCounted } from '../summary/summary';
           </button>
         </div>
         <div class="amount" [class.credit]="t.type === 'credit' && counted()">{{ amount() }}</div>
-        <div class="party">{{ t.merchant ?? t.source }}</div>
+        <div class="party" [class.muted]="!t.merchant">
+          {{ t.merchant ?? 'The SMS doesn’t name the other side' }}
+        </div>
         @if (notCounted(); as why) {
           <div class="why">Not counted · {{ why }}</div>
         }

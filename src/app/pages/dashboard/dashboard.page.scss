@@ -1,0 +1,57 @@
+.empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+.label {
+  font-size: 0.85rem;
+  color: var(--viz-muted);
+}
+
+.hero {
+  padding: 20px 16px 8px;
+
+  .figure {
+    font-size: clamp(34px, 10vw, 48px);
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 2px 0;
+  }
+
+  .sub {
+    font-size: 0.85rem;
+    color: var(--viz-muted);
+  }
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px 16px;
+  padding: 8px 16px 4px;
+
+  .value {
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.block {
+  padding: 16px 16px 4px;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+}
+
+.muted {
+  color: var(--viz-muted);
+  margin: 0;
+}
+
+.notes {
+  margin-top: 8px;
+}

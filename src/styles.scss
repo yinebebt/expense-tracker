@@ -1,0 +1,32 @@
+// Chart colors. Category hues are categorical slots 1-7 of the dataviz reference
+// palette, validated against Ionic's surfaces (#ffffff light, #121212 dark) in the
+// order they sit in the category bar. Other is the de-emphasis gray.
+:root {
+  --viz-1: #2a78d6;
+  --viz-1-soft: #86b6ef;
+  --viz-2: #eb6834;
+  --viz-3: #1baf7a;
+  --viz-4: #eda100;
+  --viz-5: #e87ba4;
+  --viz-6: #008300;
+  --viz-7: #6250d6;
+  --viz-other: #898781;
+  --viz-baseline: #c3c2b7;
+  --viz-muted: #6f6e69;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --viz-1: #3987e5;
+    --viz-1-soft: #1c5cab;
+    --viz-2: #d95926;
+    --viz-3: #199e70;
+    --viz-4: #c98500;
+    --viz-5: #d55181;
+    --viz-6: #008300;
+    --viz-7: #9085e9;
+    --viz-other: #898781;
+    --viz-baseline: #383835;
+    --viz-muted: #a3a29b;
+  }
+}

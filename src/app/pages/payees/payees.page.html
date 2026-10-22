@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Payees</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/settings" aria-label="Settings">
+        <ion-icon slot="icon-only" name="settings-outline" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-segment [value]="filter()" (ionChange)="filter.set($any($event).detail.value)">
+      <ion-segment-button value="all"><ion-label>All</ion-label></ion-segment-button>
+      <ion-segment-button value="frequent">
+        <ion-label>{{ frequent }}+ times</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (!hasAny()) {
+    <div class="empty">
+      <h2>No payees yet</h2>
+      <p>People and businesses you pay or get money from show up here once SMS are read.</p>
+    </div>
+  } @else {
+    <p class="hint">
+      Tap a payee to set a category for all their transactions. New SMS with that name get it too.
+    </p>
+    @if (payees().length) {
+      <ion-list>
+        @for (p of payees(); track p.key) {
+          <ion-item [button]="true" [detail]="false" (click)="open(p)">
+            <ion-label>
+              <h3>{{ p.name }}</h3>
+              <p>
+                {{ p.count }} {{ p.count === 1 ? 'transaction' : 'transactions' }}
+                @if (p.paidMinor) {
+                  · paid {{ fmt(p.paidMinor) }}
+                }
+                @if (p.receivedMinor) {
+                  · received {{ fmt(p.receivedMinor) }}
+                }
+              </p>
+            </ion-label>
+            <ion-note slot="end" [color]="isRuled(p) ? 'primary' : 'medium'">
+              {{ categoryLabel(p) }}
+            </ion-note>
+          </ion-item>
+        }
+      </ion-list>
+    } @else {
+      <div class="empty">
+        <p>No one with {{ frequent }} or more transactions yet.</p>
+      </div>
+    }
+
+    @if (ownAccounts().length) {
+      <ion-list class="own">
+        <ion-list-header>
+          <ion-label>
+            Your own accounts
+            <p>Money moved between these isn't counted as spent or received.</p>
+          </ion-label>
+        </ion-list-header>
+        @for (p of ownAccounts(); track p.key) {
+          <ion-item [button]="true" [detail]="false" (click)="open(p)">
+            <ion-label color="medium">
+              <h3>{{ p.name }}</h3>
+              <p>{{ p.count }} {{ p.count === 1 ? 'move' : 'moves' }}</p>
+            </ion-label>
+          </ion-item>
+        }
+      </ion-list>
+    }
+  }
+</ion-content>

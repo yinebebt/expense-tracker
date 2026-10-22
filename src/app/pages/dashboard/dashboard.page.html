@@ -1,0 +1,138 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Dashboard</ion-title>
+    <ion-buttons slot="end">
+      <ion-button routerLink="/settings" aria-label="Settings">
+        <ion-icon slot="icon-only" name="settings-outline" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  @if (sync.syncing()) {
+    <ion-progress-bar type="indeterminate" />
+  }
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content />
+  </ion-refresher>
+
+  @if (sync.error(); as e) {
+    <ion-item lines="none" color="danger">
+      <ion-label class="ion-text-wrap">{{ e }}</ion-label>
+    </ion-item>
+  }
+
+  @if (!hasData()) {
+    <div class="empty">
+      @switch (sync.access()) {
+        @case ('prompt') {
+          <h2>See where your money goes</h2>
+          <p>
+            The app reads SMS from your banks and mobile wallets (CBE, Awash, Dashen, telebirr and
+            others) to find what you spend and receive. Other messages are never read, and nothing
+            leaves the phone.
+          </p>
+          <ion-button (click)="sync.requestAccess()">Allow SMS access</ion-button>
+        }
+        @case ('denied') {
+          <h2>SMS access is off</h2>
+          <p>
+            Without it the app has nothing to show. In app settings, open Permissions → SMS → Allow.
+            If SMS is greyed out, first tap ⋮ at the top right and choose “Allow restricted
+            settings”.
+          </p>
+          <ion-button (click)="sync.openAppSettings()">Open app settings</ion-button>
+        }
+        @case ('granted') {
+          @if (sync.syncing()) {
+            <h2>Reading your SMS…</h2>
+          } @else {
+            <h2>No bank SMS found</h2>
+            <p>
+              Nothing in the last 90 days from a bank or wallet the app knows. Settings can show
+              which senders it didn't recognise.
+            </p>
+            <ion-button routerLink="/settings" fill="outline">Open Settings</ion-button>
+          }
+        }
+        @case ('unavailable') {
+          <h2>No transactions yet</h2>
+          <p>Reading SMS only works in the Android app.</p>
+        }
+      }
+    </div>
+  } @else {
+    <section class="hero">
+      <div class="label">Spent this week</div>
+      <div class="figure">{{ fmt(s().week.spent) }}</div>
+      <div class="sub">
+        {{ s().week.start | date: 'EEE d MMM' }} – {{ weekLastDay() | date: 'EEE d MMM' }}
+      </div>
+    </section>
+
+    <section class="tiles">
+      <div class="tile">
+        <div class="label">Today</div>
+        <div class="value">{{ fmt(s().today.spent) }}</div>
+      </div>
+      <div class="tile">
+        <div class="label">{{ s().month.start | date: 'MMMM' }}</div>
+        <div class="value">{{ fmt(s().month.spent) }}</div>
+      </div>
+      <div class="tile">
+        <div class="label">Received this week</div>
+        <div class="value">{{ fmt(s().week.received) }}</div>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Day by day</h2>
+      <app-week-chart [days]="s().week.days" [today]="s().today.start" />
+    </section>
+
+    <section class="block">
+      <h2>Where it went in {{ s().month.start | date: 'MMMM' }}</h2>
+      @if (s().month.byCategory.length) {
+        <app-category-bar [items]="s().month.byCategory" (picked)="showCategory($event)" />
+      } @else {
+        <p class="muted">No spending this month yet.</p>
+      }
+    </section>
+
+    <ion-list lines="none" class="notes">
+      @if (s().month.moved.count) {
+        <ion-item routerLink="/tabs/payees" [detail]="true">
+          <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
+          <ion-label class="ion-text-wrap">
+            Moved between your accounts in {{ s().month.start | date: 'MMMM' }}
+            <p>
+              {{ fmt(s().month.moved.amountMinor) }} · {{ s().month.moved.count }}
+              {{ s().month.moved.count === 1 ? 'move' : 'moves' }} · not counted
+            </p>
+          </ion-label>
+        </ion-item>
+      }
+      @if (reviewCount()) {
+        <ion-item routerLink="/tabs/transactions" [queryParams]="{ q: 'review' }" [detail]="true">
+          <ion-icon slot="start" name="alert-circle-outline" color="warning" />
+          <ion-label class="ion-text-wrap">
+            {{ reviewCount() }} {{ reviewCount() === 1 ? 'message needs' : 'messages need' }}
+            review
+            <p>Not counted until they're understood.</p>
+          </ion-label>
+        </ion-item>
+      }
+    </ion-list>
+
+    <ion-list>
+      <ion-list-header>
+        <ion-label>Recent</ion-label>
+        <ion-button routerLink="/tabs/transactions" size="small">See all</ion-button>
+      </ion-list-header>
+      @for (t of recent(); track t.id) {
+        <app-tx-item [tx]="t" />
+      }
+    </ion-list>
+  }
+</ion-content>

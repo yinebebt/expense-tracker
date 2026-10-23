@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: release-${{ github.ref }}
+
+env:
+  # The release key's certificate. An APK signed with any other key can't update installed copies.
+  CERT_SHA256: deac705258b67b5ea17504c54a590e26f4b0aa2b2c077be3ee9ada92675965c1
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-36
+          log-accepted-android-sdk-licenses: false
+
+      - run: npm ci
+      - run: npm test -- --watch=false
+
+      - name: Check the tag matches package.json
+        if: github.ref_type == 'tag'
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag is $GITHUB_REF_NAME but package.json says $version"
+            exit 1
+          fi
+
+      - name: Write the signing config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Signing secrets are missing; see README → Releasing"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          cat > android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          EOF
+
+      - run: npm run apk:release
+
+      - name: Check the signature and name the APK
+        run: |
+          version=$(node -p "require('./package.json').version")
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$apksigner" verify --print-certs "$apk" | tee certs.txt
+          if ! grep -q "SHA-256 digest: $CERT_SHA256" certs.txt; then
+            echo "::error::APK is not signed with the release key"
+            exit 1
+          fi
+          mkdir out
+          cp "$apk" "out/expense-tracker-$version.apk"
+          (cd out && sha256sum *.apk > SHA256SUMS)
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: apk
+          path: out/
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes

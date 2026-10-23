@@ -45,3 +45,6 @@ Thumbs.db
 
 # macOS
 .DS_Store
+
+# Local working notes, not published
+docs/HANDOFF.md

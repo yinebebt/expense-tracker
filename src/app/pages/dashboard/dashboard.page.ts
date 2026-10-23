@@ -18,6 +18,10 @@ import {
   IonRefresher,
   IonRefresherContent,
   IonRouterLink,
+  IonSegment,
+  IonSegmentButton,
+  IonSegmentContent,
+  IonSegmentView,
   IonTitle,
   IonToolbar,
   RefresherCustomEvent,
@@ -42,6 +46,8 @@ import { TransactionService } from '../../services/transaction.service';
 import { dayRange, spentIn } from '../../summary/summary';
 
 const HIDE_AMOUNT_KEY = 'dashboard.hideAmount';
+
+type View = 'expenses' | 'accounts' | 'summary';
 
 function readFlag(key: string): boolean {
   try {
@@ -73,6 +79,10 @@ function readFlag(key: string): boolean {
     IonProgressBar,
     IonRefresher,
     IonRefresherContent,
+    IonSegment,
+    IonSegmentButton,
+    IonSegmentView,
+    IonSegmentContent,
     TxItemComponent,
     WeekChartComponent,
     CategoryBarComponent,
@@ -114,9 +124,16 @@ export class DashboardPage {
     return diff === 0 ? 'Today' : diff === 1 ? 'Yesterday' : null;
   });
 
+  /** The page shown; swiping or tapping the segment changes it. */
+  protected readonly view = signal<View>('expenses');
+  /** Pages scrolled away from the top, where pull-to-refresh has to stay off. */
+  protected readonly scrolledDown = signal<Partial<Record<View, boolean>>>({});
+
   protected readonly fmt = formatMinor;
-  /** Masks the day's total and the balances, e.g. when someone else can see the screen. Remembered on this phone. */
+  /** Masks the amounts on all three pages, e.g. when someone else can see the screen. Remembered on this phone. */
   protected readonly amountHidden = signal(readFlag(HIDE_AMOUNT_KEY));
+  protected readonly money = (minor: number) =>
+    this.amountHidden() ? 'ETB ****' : formatMinor(minor);
 
   constructor() {
     addIcons({
@@ -130,7 +147,15 @@ export class DashboardPage {
   }
 
   protected showCategory(c: Category): void {
-    void this.router.navigate(['/tabs/transactions'], { queryParams: { q: CATEGORY_LABELS[c] } });
+    void this.router.navigate(['/tabs/transactions'], {
+      queryParams: { q: CATEGORY_LABELS[c], period: 'month' },
+    });
+  }
+
+  protected onPanelScroll(view: View, event: Event): void {
+    const down = (event.target as HTMLElement).scrollTop > 0;
+    if (this.scrolledDown()[view] !== down)
+      this.scrolledDown.update((m) => ({ ...m, [view]: down }));
   }
 
   protected toggleAmount(): void {

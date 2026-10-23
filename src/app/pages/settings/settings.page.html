@@ -79,45 +79,10 @@
       </ion-label>
       <ion-note slot="end">{{ supported.length }}</ion-note>
     </ion-item>
-    @if (otherSenders(); as list) {
-      @for (s of list; track s.address) {
-        <ion-item>
-          <ion-label>{{ s.address }}</ion-label>
-          <ion-note slot="end">{{ s.count }} SMS</ion-note>
-        </ion-item>
-      } @empty {
-        <ion-item>
-          <ion-label>No unrecognised senders</ion-label>
-        </ion-item>
-      }
-    }
   </ion-list>
-  @if (sync.access() === 'granted') {
-    @if (otherSenders(); as list) {
-      @if (list.length) {
-        <p class="hint">Bank listed here? Send one example SMS, names and numbers removed.</p>
-      }
-    } @else {
-      <div class="actions">
-        <ion-button size="small" fill="outline" [disabled]="busy()" (click)="showOtherSenders()">
-          <ion-icon slot="start" name="search" />
-          Find a missing bank
-        </ion-button>
-      </div>
-    }
-  }
 
   <ion-list lines="full">
     <ion-list-header>Data</ion-list-header>
-    <ion-item>
-      <ion-label class="ion-text-wrap">
-        Transactions
-        @if (sourceCounts()) {
-          <p>{{ sourceCounts() }}</p>
-        }
-      </ion-label>
-      <ion-note slot="end">{{ count() }}</ion-note>
-    </ion-item>
   </ion-list>
   <div class="actions">
     <ion-button size="small" fill="outline" [disabled]="busy() || !count()" (click)="exportCsv()">
@@ -138,9 +103,15 @@
 
   <ion-list lines="full">
     <ion-list-header>About</ion-list-header>
-    <ion-item lines="none">
+    <ion-item>
       <ion-label>Version</ion-label>
       <ion-note slot="end">{{ version() }}</ion-note>
+    </ion-item>
+    <ion-item lines="none" href="https://github.com/yinebebt" target="_blank" [detail]="true">
+      <ion-label>
+        Built by Yinebeb T.
+        <p>github.com/yinebebt</p>
+      </ion-label>
     </ion-item>
   </ion-list>
 </ion-content>

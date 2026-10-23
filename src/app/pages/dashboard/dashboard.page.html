@@ -2,187 +2,226 @@
   <ion-toolbar>
     <ion-title>Dashboard</ion-title>
     <ion-buttons slot="end">
+      @if (hasData()) {
+        <ion-button
+          [attr.aria-label]="amountHidden() ? 'Show amounts' : 'Hide amounts'"
+          [attr.aria-pressed]="amountHidden()"
+          (click)="toggleAmount()"
+        >
+          <ion-icon slot="icon-only" [name]="amountHidden() ? 'eye-off-outline' : 'eye-outline'" />
+        </ion-button>
+      }
       <ion-button routerLink="/settings" aria-label="Settings">
         <ion-icon slot="icon-only" name="settings-outline" />
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
+  @if (hasData()) {
+    <ion-toolbar>
+      <ion-segment [value]="view()" (ionChange)="view.set($any($event).detail.value)">
+        <ion-segment-button value="expenses" contentId="expenses">
+          <ion-label>Expenses</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="accounts" contentId="accounts">
+          <ion-label>Accounts</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="summary" contentId="summary">
+          <ion-label>Summary</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </ion-toolbar>
+  }
   @if (sync.syncing()) {
     <ion-progress-bar type="indeterminate" />
   }
 </ion-header>
 
-<ion-content>
+<ion-content [scrollY]="!hasData()">
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
     <ion-fab-button aria-label="Add transaction" (click)="txDetail.add()">
       <ion-icon name="add" />
     </ion-fab-button>
   </ion-fab>
-  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+  <ion-refresher slot="fixed" [disabled]="!!scrolledDown()[view()]" (ionRefresh)="refresh($event)">
     <ion-refresher-content />
   </ion-refresher>
 
-  @if (sync.error(); as e) {
-    <ion-item lines="none" color="danger">
-      <ion-label class="ion-text-wrap">{{ e }}</ion-label>
-    </ion-item>
-  }
-
-  @if (!hasData()) {
-    <div class="empty">
-      @switch (sync.access()) {
-        @case ('prompt') {
-          <h2>See where your money goes</h2>
-          <p>
-            The app reads SMS from your banks and mobile wallets (CBE, Awash, Dashen, telebirr and
-            others) to find what you spend and receive. Other messages are never read, and nothing
-            leaves the phone.
-          </p>
-          <ion-button (click)="sync.requestAccess()">Allow SMS access</ion-button>
-        }
-        @case ('denied') {
-          <h2>SMS access is off</h2>
-          <p>
-            Without it the app has nothing to show. In app settings, open Permissions → SMS → Allow.
-            If SMS is greyed out, first tap ⋮ at the top right and choose “Allow restricted
-            settings”.
-          </p>
-          <ion-button (click)="sync.openAppSettings()">Open app settings</ion-button>
-        }
-        @case ('granted') {
-          @if (sync.syncing()) {
-            <h2>Reading your SMS…</h2>
-          } @else {
-            <h2>No bank SMS found</h2>
-            <p>
-              Nothing in the last 90 days from a bank or wallet the app knows. Settings can show
-              which senders it didn't recognise.
-            </p>
-            <ion-button routerLink="/settings" fill="outline">Open Settings</ion-button>
-          }
-        }
-        @case ('unavailable') {
-          <h2>No transactions yet</h2>
-          <p>Reading SMS only works in the Android app.</p>
-        }
-      }
-    </div>
-  } @else {
-    <section class="period">
-      <header class="period-head">
-        <h2>{{ dayTitle() ?? (pickedDay() | date: 'EEEE') }}</h2>
-        <span class="when">{{ pickedDay() | date: 'd MMMM' }}</span>
-      </header>
-      <div class="figure hero">
-        <span>{{ amountHidden() ? 'ETB ****' : fmt(pickedTotal()) }}</span>
-        <button
-          type="button"
-          class="eye"
-          [attr.aria-label]="amountHidden() ? 'Show amount' : 'Hide amount'"
-          [attr.aria-pressed]="amountHidden()"
-          (click)="toggleAmount()"
-        >
-          <ion-icon [name]="amountHidden() ? 'eye-off-outline' : 'eye-outline'" />
-        </button>
-      </div>
-      <app-week-chart
-        class="inset"
-        [days]="s().week.days"
-        [today]="s().today.start"
-        [selected]="pickedIndex()"
-        (selectedChange)="dayIndex.set($event)"
-      >
-        This week · {{ fmt(s().week.spent) }}
-      </app-week-chart>
-      <ion-list class="rows" [attr.aria-label]="'Spent on ' + (pickedDay() | date: 'EEEE')">
-        @for (t of pickedSpent(); track t.id) {
-          <app-tx-item
-            [tx]="t"
-            dateFormat="HH:mm"
-            [clickable]="true"
-            (picked)="txDetail.open($event)"
-          />
-        } @empty {
-          <p class="muted">
-            {{ pickedIndex() > todayIndex() ? 'Nothing yet.' : 'Nothing spent this day.' }}
-          </p>
-        }
-      </ion-list>
-    </section>
-
-    <section class="period">
-      <header class="period-head">
-        <h2>{{ s().month.start | date: 'MMMM' }}</h2>
-        <span class="when">so far</span>
-      </header>
-      <div class="figure">{{ fmt(s().month.spent) }}</div>
-      @if (s().month.received) {
-        <div class="received">Received {{ fmt(s().month.received) }}</div>
-      }
-      <div class="inset">
-        @if (s().month.byCategory.length) {
-          <app-category-bar [items]="s().month.byCategory" (picked)="showCategory($event)" />
-        } @else {
-          <p class="muted">No spending this month yet.</p>
-        }
-      </div>
-      @if (s().month.moved.count) {
-        <ion-list class="rows" lines="none">
-          <ion-item routerLink="/tabs/payees" [detail]="true">
-            <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
-            <ion-label class="ion-text-wrap">
-              Moved between your accounts
-              <p>
-                {{ fmt(s().month.moved.amountMinor) }} · {{ s().month.moved.count }}
-                {{ s().month.moved.count === 1 ? 'move' : 'moves' }} · not counted
-              </p>
-            </ion-label>
-          </ion-item>
-        </ion-list>
-      }
-    </section>
-
-    <section class="period">
-      <header class="period-head">
-        <h2>Accounts</h2>
-        <span class="when">latest balance</span>
-      </header>
-      @if (balances().length) {
-        <div class="figure">{{ amountHidden() ? 'ETB ****' : fmt(balanceTotal()) }}</div>
-        <ion-list class="rows">
-          @for (b of balances(); track b.source) {
-            <ion-item [button]="true" [detail]="false" (click)="txDetail.editBalance(b.source)">
-              <ion-label>
-                <h3>{{ b.source }}</h3>
-                <p>{{ b.manual ? 'Typed in' : 'From SMS' }} · {{ b.at | date: 'd MMM' }}</p>
-              </ion-label>
-              <ion-note slot="end" class="balance">
-                {{ amountHidden() ? '****' : fmt(b.balanceMinor) }}
-              </ion-note>
-            </ion-item>
-          }
-        </ion-list>
-      } @else {
-        <p class="muted inset">No balance yet. Bank SMS that state one fill this in.</p>
-      }
-      <div class="inset">
-        <button type="button" class="link" (click)="txDetail.editBalance()">
-          Update a balance
-        </button>
-      </div>
-    </section>
-
-    @if (reviewCount()) {
-      <ion-list class="rows" lines="none">
-        <ion-item routerLink="/tabs/transactions" [queryParams]="{ q: 'review' }" [detail]="true">
-          <ion-icon slot="start" name="alert-circle-outline" color="warning" />
-          <ion-label class="ion-text-wrap">
-            {{ reviewCount() }} {{ reviewCount() === 1 ? 'message needs' : 'messages need' }}
-            review
-            <p>Not counted until they're understood.</p>
-          </ion-label>
-        </ion-item>
-      </ion-list>
+  <div class="screen">
+    @if (sync.error(); as e) {
+      <ion-item lines="none" color="danger">
+        <ion-label class="ion-text-wrap">{{ e }}</ion-label>
+      </ion-item>
     }
-  }
+
+    @if (!hasData()) {
+      <div class="empty">
+        @switch (sync.access()) {
+          @case ('prompt') {
+            <h2>See where your money goes</h2>
+            <p>
+              The app reads SMS from your banks and mobile wallets (CBE, Awash, Dashen, telebirr and
+              others) to find what you spend and receive. Other messages are never read, and nothing
+              leaves the phone.
+            </p>
+            <ion-button (click)="sync.requestAccess()">Allow SMS access</ion-button>
+          }
+          @case ('denied') {
+            <h2>SMS access is off</h2>
+            <p>
+              Without it the app has nothing to show. In app settings, open Permissions → SMS →
+              Allow. If SMS is greyed out, first tap ⋮ at the top right and choose “Allow restricted
+              settings”.
+            </p>
+            <ion-button (click)="sync.openAppSettings()">Open app settings</ion-button>
+          }
+          @case ('granted') {
+            @if (sync.syncing()) {
+              <h2>Reading your SMS…</h2>
+            } @else {
+              <h2>No bank SMS found</h2>
+              <p>
+                Nothing in the last 90 days from a bank or wallet the app knows. Settings can show
+                which banks it supports.
+              </p>
+              <ion-button routerLink="/settings" fill="outline">Open Settings</ion-button>
+            }
+          }
+          @case ('unavailable') {
+            <h2>No transactions yet</h2>
+            <p>Reading SMS only works in the Android app.</p>
+          }
+        }
+      </div>
+    } @else {
+      <ion-segment-view>
+        <ion-segment-content id="expenses" (scroll)="onPanelScroll('expenses', $event)">
+          <section class="period">
+            <header class="period-head">
+              <h2>{{ dayTitle() ?? (pickedDay() | date: 'EEEE') }}</h2>
+              <span class="when">{{ pickedDay() | date: 'd MMMM' }}</span>
+            </header>
+            <div class="figure hero">
+              {{ money(pickedTotal()) }}
+            </div>
+            <app-week-chart
+              class="inset"
+              [days]="s().week.days"
+              [today]="s().today.start"
+              [selected]="pickedIndex()"
+              (selectedChange)="dayIndex.set($event)"
+            >
+              This week · {{ money(s().week.spent) }}
+            </app-week-chart>
+            <ion-list class="rows" [attr.aria-label]="'Spent on ' + (pickedDay() | date: 'EEEE')">
+              @for (t of pickedSpent(); track t.id) {
+                <app-tx-item
+                  [tx]="t"
+                  dateFormat="HH:mm"
+                  [clickable]="true"
+                  (picked)="txDetail.open($event)"
+                />
+              } @empty {
+                <p class="muted">
+                  {{ pickedIndex() > todayIndex() ? 'Nothing yet.' : 'Nothing spent this day.' }}
+                </p>
+              }
+            </ion-list>
+          </section>
+        </ion-segment-content>
+
+        <ion-segment-content id="accounts" (scroll)="onPanelScroll('accounts', $event)">
+          <section class="period">
+            <header class="period-head">
+              <h2>Accounts</h2>
+              <span class="when">latest balance</span>
+            </header>
+            @if (balances().length) {
+              <div class="figure hero">
+                {{ money(balanceTotal()) }}
+              </div>
+              <ion-list class="rows">
+                @for (b of balances(); track b.source) {
+                  <ion-item
+                    [button]="true"
+                    [detail]="false"
+                    (click)="txDetail.editBalance(b.source)"
+                  >
+                    <ion-label>
+                      <h3>{{ b.source }}</h3>
+                      <p>{{ b.manual ? 'Typed in' : 'From SMS' }} · {{ b.at | date: 'd MMM' }}</p>
+                    </ion-label>
+                    <ion-note slot="end" class="balance">
+                      {{ amountHidden() ? '****' : fmt(b.balanceMinor) }}
+                    </ion-note>
+                  </ion-item>
+                }
+              </ion-list>
+            } @else {
+              <p class="muted inset">No balance yet. Bank SMS that state one fill this in.</p>
+            }
+            <div class="inset">
+              <button type="button" class="link" (click)="txDetail.editBalance()">
+                Update a balance
+              </button>
+            </div>
+          </section>
+        </ion-segment-content>
+
+        <ion-segment-content id="summary" (scroll)="onPanelScroll('summary', $event)">
+          <section class="period">
+            <header class="period-head">
+              <h2>{{ s().month.start | date: 'MMMM' }}</h2>
+              <span class="when">so far</span>
+            </header>
+            <div class="figure hero">{{ money(s().month.spent) }}</div>
+            @if (s().month.received) {
+              <div class="received">Received {{ money(s().month.received) }}</div>
+            }
+            <div class="inset">
+              @if (s().month.byCategory.length) {
+                <app-category-bar
+                  [items]="s().month.byCategory"
+                  [masked]="amountHidden()"
+                  (picked)="showCategory($event)"
+                />
+              } @else {
+                <p class="muted">No spending this month yet.</p>
+              }
+            </div>
+            @if (s().month.moved.count) {
+              <ion-list class="rows" lines="none">
+                <ion-item routerLink="/tabs/payees" [detail]="true">
+                  <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
+                  <ion-label class="ion-text-wrap">
+                    Moved between your accounts
+                    <p>
+                      {{ money(s().month.moved.amountMinor) }} · {{ s().month.moved.count }}
+                      {{ s().month.moved.count === 1 ? 'move' : 'moves' }} · not counted
+                    </p>
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            }
+          </section>
+
+          @if (reviewCount()) {
+            <ion-list class="rows" lines="none">
+              <ion-item
+                routerLink="/tabs/transactions"
+                [queryParams]="{ q: 'review' }"
+                [detail]="true"
+              >
+                <ion-icon slot="start" name="alert-circle-outline" color="warning" />
+                <ion-label class="ion-text-wrap">
+                  {{ reviewCount() }}
+                  {{ reviewCount() === 1 ? 'message needs' : 'messages need' }} review
+                  <p>Not counted until they're understood.</p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+          }
+        </ion-segment-content>
+      </ion-segment-view>
+    }
+  </div>
 </ion-content>

@@ -19,7 +19,7 @@ Where the app stands, for whoever picks it up next. Setup, running and releasing
 - **Add by hand** (+ button): one form with type (money out or in), amount, payee, category, account, date (defaults to now) and reference. Reference is required, and so is the payee for money out. These rows can be deleted from their detail card; SMS rows can't.
 - **Accounts** (Dashboard): each account's latest balance and the total. Balances come from the "current balance" in bank SMS, or are typed in (Cash, or a bank whose SMS don't state one); whichever is newer wins. The eye toggle hides them too.
 - **Payees:** grouped by name, own accounts listed apart. A payee's card sets one category for all their transactions and new ones.
-- **Settings:** SMS access and sync, supported banks, find a missing bank, export CSV, delete all, version.
+- **Settings:** SMS access and sync, supported banks, export CSV, delete all, version.
 - **Export:** CSV of every transaction to `Download/expense-tracker-<date>.csv` (Android 10+; older versions get the share sheet), UTF-8 with a byte-order mark for Amharic names.
 - **Sources:** 8 banks (CBE, Awash, Dashen, BOA, Coopbank, Zemen, Enat, Amhara Bank) and 6 wallets (telebirr, M-PESA, CBE Birr, HelloCash, Kacha, e-Birr). Hibret was dropped from the list although it sent one SMS on the owner's phone.
 
@@ -39,7 +39,7 @@ Where the app stands, for whoever picks it up next. Setup, running and releasing
 4. **Nothing runs in the background;** SMS are read when the app opens.
 5. **Own-transfer guesses can misfire:** two same-amount transactions on two accounts within 10 minutes are paired, and a payee named "…Bank" counts as a transfer. Both can be overridden per payee.
 6. **Changing `payeeKey()` doesn't re-apply payee rules** to rows that newly merge into a ruled payee.
-7. **The eye toggle masks the day's total and the balances,** not the week total or chart labels.
+7. **The eye toggle masks the Dashboard's amounts,** not the week chart's bar heights or its screen-reader labels, nor the Transactions and Payees tabs.
 8. **One balance per bank:** someone with two CBE accounts sees whichever reported last. SMS show only a masked account number, which could be used to tell them apart.
 9. **Not done:** Ethiopian calendar, a proper app name, deleting Capacitor's example tests in `android/app/src/test` and `androidTest`.
 

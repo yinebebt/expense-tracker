@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { App } from '@capacitor/app';
 import { knownSenders } from '../parsing/sms-parser';
 import { DatabaseService } from './database.service';
-import { SenderCount, SmsAccess, SmsReaderService } from './sms-reader.service';
+import { SmsAccess, SmsReaderService } from './sms-reader.service';
 import { ImportResult, TransactionService } from './transaction.service';
 
 /** How far back the first import (and a full re-import) reads. */
@@ -52,11 +52,6 @@ export class SmsSyncService {
 
   openAppSettings(): Promise<void> {
     return this.reader.openAppSettings();
-  }
-
-  /** Senders in the import window that look like businesses but no rule knows. */
-  otherSenders(): Promise<SenderCount[]> {
-    return this.reader.otherSenders(knownSenders(), syncStart(null, Date.now()));
   }
 
   /** Reads new messages since the last sync. Concurrent calls join the running sync and trigger one more pass. */

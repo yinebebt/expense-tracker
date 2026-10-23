@@ -39,7 +39,7 @@ const COLOR: Record<Category, string> = {
             <span class="swatch" [style.background]="color(s.category)"></span>
             <span class="name">{{ label(s.category) }}</span>
             <span class="pct">{{ pct(s.amountMinor) }}%</span>
-            <span class="amt">{{ fmt(s.amountMinor) }}</span>
+            <span class="amt">{{ masked() ? '****' : fmt(s.amountMinor) }}</span>
           </button>
         </li>
       }
@@ -98,6 +98,8 @@ const COLOR: Record<Category, string> = {
 })
 export class CategoryBarComponent {
   readonly items = input.required<CategoryTotal[]>();
+  /** Hides the amounts; the shares stay. */
+  readonly masked = input(false);
   readonly picked = output<Category>();
 
   protected readonly fmt = formatMinor;

@@ -122,51 +122,6 @@ class SmsInboxPlugin : Plugin() {
         call.resolve(result)
     }
 
-    /**
-     * Business-looking sender IDs (names or short codes, not phone numbers) received since `since`
-     * that aren't in `known`, with message counts. Lets beta testers report banks the app misses.
-     * Reads addresses only, never message bodies.
-     */
-    @PluginMethod
-    fun otherSenders(call: PluginCall) {
-        if (getPermissionState("sms") != PermissionState.GRANTED) {
-            call.reject("SMS permission not granted", "PERMISSION_DENIED")
-            return
-        }
-        val known = call.getArray("known")?.toList<String>()?.map(::normalize)?.toSet().orEmpty()
-        val since = call.getLong("since") ?: 0L
-        val counts = mutableMapOf<String, Int>()
-
-        try {
-            context.contentResolver.query(
-                Telephony.Sms.Inbox.CONTENT_URI,
-                arrayOf(Telephony.Sms.ADDRESS),
-                "${Telephony.Sms.DATE} >= ?",
-                arrayOf(since.toString()),
-                null,
-            )?.use { c ->
-                val address = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
-                while (c.moveToNext()) {
-                    val from = c.getString(address) ?: continue
-                    val key = normalize(from)
-                    val business = key.any { it.isLetter() } || key.length in 3..6
-                    if (business && key !in known) counts[from] = (counts[from] ?: 0) + 1
-                }
-            }
-        } catch (e: Exception) {
-            call.reject("Reading SMS failed", e)
-            return
-        }
-        val senders = JSArray()
-        counts.entries.sortedByDescending { it.value }.take(40).forEach { (from, n) ->
-            senders.put(JSObject().apply {
-                put("address", from)
-                put("count", n)
-            })
-        }
-        call.resolve(JSObject().apply { put("senders", senders) })
-    }
-
     /** Emits `smsChanged` whenever the SMS store changes, while the app is running. */
     @PluginMethod
     fun startWatching(call: PluginCall) {

@@ -20,10 +20,9 @@ import {
   ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { downloadOutline, refresh, search, trashOutline } from 'ionicons/icons';
+import { downloadOutline, refresh, trashOutline } from 'ionicons/icons';
 import { SOURCES } from '../../parsing/rules';
 import { ExportService } from '../../services/export.service';
-import { SenderCount } from '../../services/sms-reader.service';
 import { IMPORT_WINDOW_DAYS, SmsSyncService } from '../../services/sms-sync.service';
 import { TransactionService } from '../../services/transaction.service';
 
@@ -69,38 +68,17 @@ export class SettingsPage {
   protected readonly count = computed(() => this.txService.transactions().length);
   protected readonly busy = signal(false);
   protected readonly version = signal('');
-  protected readonly otherSenders = signal<SenderCount[] | null>(null);
 
   protected readonly accessText = computed(() => {
     const a = this.sync.access();
     return a ? ACCESS_TEXT[a] : null;
   });
 
-  /** Stored transactions per source, only for sources that have any. */
-  protected readonly sourceCounts = computed(() => {
-    const counts = new Map<string, number>();
-    for (const t of this.txService.transactions())
-      counts.set(t.source, (counts.get(t.source) ?? 0) + 1);
-    return [...counts].map(([source, n]) => `${source} ${n}`).join(' · ');
-  });
-
   constructor() {
-    addIcons({ refresh, search, downloadOutline, trashOutline });
+    addIcons({ refresh, downloadOutline, trashOutline });
     App.getInfo()
       .then((info) => this.version.set(`${info.version} (${info.build})`))
       .catch(() => this.version.set('browser build'));
-  }
-
-  protected async showOtherSenders(): Promise<void> {
-    this.busy.set(true);
-    try {
-      this.otherSenders.set(await this.sync.otherSenders());
-    } catch (err) {
-      console.error('Listing senders failed', err);
-      this.otherSenders.set([]);
-    } finally {
-      this.busy.set(false);
-    }
   }
 
   protected async exportCsv(): Promise<void> {

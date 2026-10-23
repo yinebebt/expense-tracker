@@ -9,67 +9,66 @@
 </ion-header>
 
 <ion-content>
-  <ion-list>
+  <ion-list lines="full">
     <ion-list-header>SMS</ion-list-header>
     <ion-item>
       <ion-label>
         Access
-        <p>Bank and wallet SMS only. Nothing leaves the phone.</p>
+        <p>Bank and wallet SMS.</p>
       </ion-label>
       @if (accessText(); as a) {
         <ion-note slot="end" [color]="a[1]">{{ a[0] }}</ion-note>
       }
     </ion-item>
-
-    @switch (sync.access()) {
-      @case ('prompt') {
-        <ion-item [button]="true" [detail]="false" (click)="sync.requestAccess()">
-          <ion-label color="primary">Allow SMS access</ion-label>
-        </ion-item>
-      }
-      @case ('denied') {
-        <ion-item [button]="true" (click)="sync.openAppSettings()">
-          <ion-label class="ion-text-wrap">
-            <span class="action">Open app settings</span>
-            <p>Permissions → SMS → Allow. Greyed out? ⋮ → Allow restricted settings.</p>
-          </ion-label>
-        </ion-item>
-      }
-      @case ('granted') {
-        <ion-item>
-          <ion-label>Last checked</ion-label>
-          <ion-note slot="end">
-            @if (sync.lastResult(); as r) {
-              {{ r.at | date: 'd MMM, HH:mm' }} · {{ r.inserted }} new
-            } @else {
-              {{ sync.syncing() ? 'Reading…' : 'Not yet' }}
-            }
-          </ion-note>
-        </ion-item>
-        <ion-item
-          [button]="true"
-          [detail]="false"
-          [disabled]="sync.syncing()"
-          (click)="sync.sync()"
-        >
-          <ion-label color="primary">Check for new SMS</ion-label>
-        </ion-item>
-        <ion-item
-          [button]="true"
-          [detail]="false"
-          [disabled]="sync.syncing()"
-          (click)="sync.reimport()"
-        >
-          <ion-label color="primary">Re-read last {{ windowDays }} days</ion-label>
-        </ion-item>
-      }
+    @if (sync.access() === 'granted') {
+      <ion-item>
+        <ion-label>Last checked</ion-label>
+        <ion-note slot="end">
+          @if (sync.lastResult(); as r) {
+            {{ r.at | date: 'd MMM, HH:mm' }} · {{ r.inserted }} new
+          } @else {
+            {{ sync.syncing() ? 'Reading…' : 'Not yet' }}
+          }
+        </ion-note>
+      </ion-item>
     }
     @if (sync.error(); as e) {
       <ion-item lines="none">
         <ion-label class="ion-text-wrap" color="danger">{{ e }}</ion-label>
       </ion-item>
     }
+  </ion-list>
+  @if (sync.access() !== 'unavailable') {
+    <div class="actions">
+      @switch (sync.access()) {
+        @case ('prompt') {
+          <ion-button size="small" (click)="sync.requestAccess()">Allow SMS access</ion-button>
+        }
+        @case ('denied') {
+          <ion-button size="small" (click)="sync.openAppSettings()">Open app settings</ion-button>
+        }
+        @case ('granted') {
+          <ion-button size="small" [disabled]="sync.syncing()" (click)="sync.sync()">
+            <ion-icon slot="start" name="refresh" />
+            Check now
+          </ion-button>
+          <ion-button
+            size="small"
+            fill="outline"
+            [disabled]="sync.syncing()"
+            (click)="sync.reimport()"
+          >
+            Re-read {{ windowDays }} days
+          </ion-button>
+        }
+      }
+    </div>
+  }
+  @if (sync.access() === 'denied') {
+    <p class="hint">Permissions → SMS → Allow. Greyed out? ⋮ → Allow restricted settings.</p>
+  }
 
+  <ion-list lines="full">
     <ion-list-header>Banks and wallets</ion-list-header>
     <ion-item [button]="true" [detail]="false" (click)="showSupported.set(!showSupported())">
       <ion-label class="ion-text-wrap">
@@ -80,35 +79,35 @@
       </ion-label>
       <ion-note slot="end">{{ supported.length }}</ion-note>
     </ion-item>
-    @if (sync.access() === 'granted') {
-      @if (otherSenders(); as list) {
-        @for (s of list; track s.address) {
-          <ion-item>
-            <ion-label>{{ s.address }}</ion-label>
-            <ion-note slot="end">{{ s.count }} SMS</ion-note>
-          </ion-item>
-        } @empty {
-          <ion-item>
-            <ion-label>No unrecognised senders</ion-label>
-          </ion-item>
-        }
-        @if (list.length) {
-          <ion-item lines="none">
-            <ion-label class="ion-text-wrap">
-              <p>Bank listed here? Send one example SMS, names and numbers removed.</p>
-            </ion-label>
-          </ion-item>
-        }
-      } @else {
-        <ion-item [button]="true" [detail]="false" [disabled]="busy()" (click)="showOtherSenders()">
-          <ion-label class="ion-text-wrap">
-            <span class="action">Find a missing bank</span>
-            <p>Lists unrecognised senders. Names only, never message text.</p>
-          </ion-label>
+    @if (otherSenders(); as list) {
+      @for (s of list; track s.address) {
+        <ion-item>
+          <ion-label>{{ s.address }}</ion-label>
+          <ion-note slot="end">{{ s.count }} SMS</ion-note>
+        </ion-item>
+      } @empty {
+        <ion-item>
+          <ion-label>No unrecognised senders</ion-label>
         </ion-item>
       }
     }
+  </ion-list>
+  @if (sync.access() === 'granted') {
+    @if (otherSenders(); as list) {
+      @if (list.length) {
+        <p class="hint">Bank listed here? Send one example SMS, names and numbers removed.</p>
+      }
+    } @else {
+      <div class="actions">
+        <ion-button size="small" fill="outline" [disabled]="busy()" (click)="showOtherSenders()">
+          <ion-icon slot="start" name="search" />
+          Find a missing bank
+        </ion-button>
+      </div>
+    }
+  }
 
+  <ion-list lines="full">
     <ion-list-header>Data</ion-list-header>
     <ion-item>
       <ion-label class="ion-text-wrap">
@@ -119,15 +118,25 @@
       </ion-label>
       <ion-note slot="end">{{ count() }}</ion-note>
     </ion-item>
-    <ion-item
-      [button]="true"
-      [detail]="false"
+  </ion-list>
+  <div class="actions">
+    <ion-button size="small" fill="outline" [disabled]="busy() || !count()" (click)="exportCsv()">
+      <ion-icon slot="start" name="download-outline" />
+      Export CSV
+    </ion-button>
+    <ion-button
+      size="small"
+      fill="outline"
+      color="danger"
       [disabled]="busy() || !count()"
       (click)="confirmClear()"
     >
-      <ion-label color="danger">Delete all transactions</ion-label>
-    </ion-item>
+      <ion-icon slot="start" name="trash-outline" />
+      Delete all
+    </ion-button>
+  </div>
 
+  <ion-list lines="full">
     <ion-list-header>About</ion-list-header>
     <ion-item lines="none">
       <ion-label>Version</ion-label>

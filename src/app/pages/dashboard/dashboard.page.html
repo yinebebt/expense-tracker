@@ -13,6 +13,11 @@
 </ion-header>
 
 <ion-content>
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button aria-label="Add transaction" (click)="txDetail.add()">
+      <ion-icon name="add" />
+    </ion-fab-button>
+  </ion-fab>
   <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
     <ion-refresher-content />
   </ion-refresher>

@@ -36,7 +36,7 @@ for f in $R/drawable*/splash.png; do
   w=$(magick identify -format %w "$f"); h=$(magick identify -format %h "$f")
   m=$(( (w < h ? w : h) * 75 / 100 ))
   rsvg-convert -w $m -h $m resources/icon-foreground.svg -o $TMP/fg.png
-  magick -size ${w}x${h} xc:'#2366C4' $TMP/fg.png -gravity center -composite "$f"
+  magick -size ${w}x${h} xc:'#1C2430' $TMP/fg.png -gravity center -composite "$f"
 done
 
 # Favicon for the web build.

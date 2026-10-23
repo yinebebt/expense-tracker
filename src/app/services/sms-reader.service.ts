@@ -34,9 +34,15 @@ interface SmsInboxPlugin {
   startWatching(): Promise<void>;
   addListener(event: 'smsChanged', fn: () => void): Promise<PluginListenerHandle>;
   openSettings(): Promise<void>;
+  saveFile(options: {
+    name: string;
+    mimeType: string;
+    text: string;
+  }): Promise<{ savedAs?: string; shared?: boolean }>;
 }
 
-const SmsInbox = registerPlugin<SmsInboxPlugin>('SmsInbox');
+/** Also used by ExportService, which saves files through the same native plugin. */
+export const SmsInbox = registerPlugin<SmsInboxPlugin>('SmsInbox');
 
 const toAccess = (s: PermissionState): SmsAccess =>
   s === 'granted' ? 'granted' : s === 'denied' ? 'denied' : 'prompt';

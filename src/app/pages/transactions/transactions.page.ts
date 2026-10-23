@@ -6,6 +6,8 @@ import {
   IonButton,
   IonButtons,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonHeader,
   IonIcon,
   IonItemDivider,
@@ -23,7 +25,7 @@ import {
   RefresherCustomEvent,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { settingsOutline } from 'ionicons/icons';
+import { add, settingsOutline } from 'ionicons/icons';
 import { TxItemComponent } from '../../components/tx-item.component';
 import { formatMinor } from '../../models/money';
 import { CATEGORY_LABELS, Transaction } from '../../models/transaction.model';
@@ -53,6 +55,8 @@ interface DayGroup {
     IonIcon,
     IonSearchbar,
     IonContent,
+    IonFab,
+    IonFabButton,
     IonList,
     IonItemGroup,
     IonItemDivider,
@@ -87,6 +91,11 @@ interface DayGroup {
     </ion-header>
 
     <ion-content>
+      <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+        <ion-fab-button aria-label="Add transaction" (click)="txDetail.add()">
+          <ion-icon name="add" />
+        </ion-fab-button>
+      </ion-fab>
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
@@ -159,7 +168,7 @@ export class TransactionsPage {
   });
 
   constructor() {
-    addIcons({ settingsOutline });
+    addIcons({ add, settingsOutline });
     // The Payees tab links here with ?q=<name> to show one payee's transactions.
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())

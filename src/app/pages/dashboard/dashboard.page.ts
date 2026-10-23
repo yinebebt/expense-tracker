@@ -5,6 +5,8 @@ import {
   IonButton,
   IonButtons,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonHeader,
   IonIcon,
   IonItem,
@@ -21,6 +23,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  add,
   alertCircleOutline,
   eyeOffOutline,
   eyeOutline,
@@ -60,6 +63,8 @@ function readFlag(key: string): boolean {
     IonButton,
     IonIcon,
     IonContent,
+    IonFab,
+    IonFabButton,
     IonList,
     IonItem,
     IonLabel,
@@ -109,6 +114,7 @@ export class DashboardPage {
 
   constructor() {
     addIcons({
+      add,
       settingsOutline,
       alertCircleOutline,
       swapHorizontalOutline,

@@ -140,3 +140,8 @@ ion-modal.dialog {
     color: var(--viz-muted);
   }
 }
+
+// Room under the last row so the floating add button never covers an amount.
+ion-content:has(> ion-fab) {
+  --padding-bottom: 88px;
+}

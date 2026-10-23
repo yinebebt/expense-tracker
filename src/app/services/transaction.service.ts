@@ -1,5 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Category, RawSms, Transaction } from '../models/transaction.model';
+import {
+  Category,
+  isManual,
+  ManualEntry,
+  manualTransaction,
+  RawSms,
+  Transaction,
+} from '../models/transaction.model';
 import { parseSms, toTransaction } from '../parsing/sms-parser';
 import { findSelfTransfers, SELF_TRANSFER_WINDOW_MS } from '../parsing/transfers';
 import { groupByPayee, payeeKey, payeeRuleCategory } from '../summary/payees';
@@ -81,6 +88,18 @@ export class TransactionService {
   /** The category set for a payee, if any. */
   payeeRule(name: string): Category | null {
     return this.rules.get(payeeKey(name)) ?? null;
+  }
+
+  async addManual(entry: ManualEntry): Promise<void> {
+    await this.db.insertMany([manualTransaction(entry, crypto.randomUUID(), Date.now())]);
+    await this.load();
+  }
+
+  /** Only rows added by hand can be deleted one by one; an SMS row would come back on re-read. */
+  async deleteManual(t: Transaction): Promise<void> {
+    if (!isManual(t)) return;
+    await this.db.deleteOne(t.id);
+    await this.load();
   }
 
   async clear(): Promise<void> {

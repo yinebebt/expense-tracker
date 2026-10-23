@@ -5,13 +5,14 @@ import {
   IonIcon,
   IonSelect,
   IonSelectOption,
+  AlertController,
   ModalController,
   ToastController,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { formatMinor } from '../models/money';
-import { CATEGORIES, Category, CATEGORY_LABELS } from '../models/transaction.model';
+import { CATEGORIES, Category, CATEGORY_LABELS, isManual } from '../models/transaction.model';
 import { knownSenders } from '../parsing/sms-parser';
 import { SmsReaderService } from '../services/sms-reader.service';
 import { TransactionService } from '../services/transaction.service';
@@ -61,25 +62,32 @@ import { isCounted } from '../summary/summary';
           }
         </dl>
 
-        <div class="sms-head">
-          <span>SMS</span>
-          @if (message()) {
-            <button type="button" class="link" (click)="copy()">Copy</button>
-          }
-        </div>
-        <div class="sms">
-          @switch (message()) {
-            @case (undefined) {
-              <span class="muted">Loading…</span>
+        @if (manual()) {
+          <div class="manual">
+            <span class="muted">Added by hand</span>
+            <button type="button" class="link danger" (click)="confirmDelete()">Delete</button>
+          </div>
+        } @else {
+          <div class="sms-head">
+            <span>SMS</span>
+            @if (message()) {
+              <button type="button" class="link" (click)="copy()">Copy</button>
             }
-            @case (null) {
-              <span class="muted">No longer in the inbox.</span>
+          </div>
+          <div class="sms">
+            @switch (message()) {
+              @case (undefined) {
+                <span class="muted">Loading…</span>
+              }
+              @case (null) {
+                <span class="muted">No longer in the inbox.</span>
+              }
+              @default {
+                {{ message() }}
+              }
             }
-            @default {
-              {{ message() }}
-            }
-          }
-        </div>
+          </div>
+        }
       }
     </ion-content>
   `,
@@ -107,6 +115,15 @@ import { isCounted } from '../summary/summary';
       font-size: 0.85rem;
       color: var(--viz-muted);
     }
+    .manual {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 14px;
+      font-size: 0.85rem;
+    }
+    .link.danger {
+      color: var(--ion-color-danger);
+    }
     .sms {
       max-height: 9.5em;
       overflow-y: auto;
@@ -126,6 +143,7 @@ export class TxDetailComponent implements OnInit {
 
   private readonly modal = inject(ModalController);
   private readonly toasts = inject(ToastController);
+  private readonly alerts = inject(AlertController);
   private readonly txService = inject(TransactionService);
   private readonly reader = inject(SmsReaderService);
 
@@ -139,6 +157,11 @@ export class TxDetailComponent implements OnInit {
   );
   /** undefined while loading, null when the SMS can't be found. */
   protected readonly message = signal<string | null | undefined>(undefined);
+
+  protected readonly manual = computed(() => {
+    const t = this.tx();
+    return !!t && isManual(t);
+  });
 
   protected readonly counted = computed(() => {
     const t = this.tx();
@@ -185,8 +208,31 @@ export class TxDetailComponent implements OnInit {
       .catch((err) => console.error('Updating category failed', err));
   }
 
+  protected async confirmDelete(): Promise<void> {
+    const t = this.tx();
+    if (!t) return;
+    const alert = await this.alerts.create({
+      header: 'Delete this transaction?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: () => {
+            void this.modal.dismiss();
+            this.txService
+              .deleteManual(t)
+              .catch((err) => console.error('Deleting transaction failed', err));
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
   private async loadMessage(): Promise<void> {
     const t = this.tx();
+    if (t && isManual(t)) return;
     if (t?.rawText) return this.message.set(t.rawText);
     if (!t?.smsId) return this.message.set(null);
     try {

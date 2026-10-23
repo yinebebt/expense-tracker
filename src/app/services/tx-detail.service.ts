@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { ModalController } from '@ionic/angular';
 import { Transaction } from '../models/transaction.model';
 
-/** Opens the detail dialog for a tapped transaction row. */
+/** Opens the transaction dialogs: the detail of a tapped row, and adding one by hand. */
 @Injectable({ providedIn: 'root' })
 export class TxDetailService {
   private readonly modals = inject(ModalController);
@@ -14,6 +14,12 @@ export class TxDetailService {
       componentProps: { txId: t.id },
       cssClass: 'dialog',
     });
+    await modal.present();
+  }
+
+  async add(): Promise<void> {
+    const { TxAddComponent } = await import('../components/tx-add.component');
+    const modal = await this.modals.create({ component: TxAddComponent, cssClass: 'dialog' });
     await modal.present();
   }
 }

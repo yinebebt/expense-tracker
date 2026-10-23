@@ -224,6 +224,12 @@ export class DatabaseService {
   }
 
   /** Removes all transactions and sync state, so the next sync starts from scratch. Payee rules stay. */
+  async deleteOne(id: string): Promise<void> {
+    const db = await this.conn();
+    await db.run('DELETE FROM transactions WHERE id = ?', [id]);
+    await this.persist();
+  }
+
   async clear(): Promise<void> {
     const db = await this.conn();
     await db.execute('DELETE FROM transactions; DELETE FROM meta;');

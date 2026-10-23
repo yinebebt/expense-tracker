@@ -32,13 +32,15 @@ export interface Transaction {
   amountMinor: number | null;
   currency: string;
   type: TxType;
-  /** Epoch ms, taken from the SMS received time. */
+  /** Epoch ms: the SMS received time, or the date entered for a row added by hand. */
   occurredAt: number;
   merchant: string | null;
   reference: string | null;
-  /** Parser source, e.g. 'CBE', 'telebirr'. */
+  /** Parser source, e.g. 'CBE', 'telebirr', or the account picked for a row added by hand. */
   source: string;
+  /** Null for rows added by hand. */
   smsId: string | null;
+  /** `manual|<id>` for rows added by hand; see isManual(). */
   dedupKey: string;
   /** Null for unknown rows until reviewed. */
   category: Category | null;
@@ -64,4 +66,36 @@ export function txTitle(t: Pick<Transaction, 'merchant' | 'type'>): string {
   if (t.type === 'debit') return 'Money out';
   if (t.type === 'credit') return 'Money in';
   return 'Unrecognised SMS';
+}
+
+const MANUAL_KEY = 'manual|';
+
+/** Rows added by hand rather than read from an SMS. */
+export function isManual(t: Pick<Transaction, 'dedupKey'>): boolean {
+  return t.dedupKey.startsWith(MANUAL_KEY);
+}
+
+export interface ManualEntry {
+  type: 'debit' | 'credit';
+  amountMinor: number;
+  occurredAt: number;
+  merchant: string | null;
+  category: Category;
+  source: string;
+  reference: string;
+}
+
+/** A transaction row for something entered by hand. The category counts as set by hand. */
+export function manualTransaction(e: ManualEntry, id: string, now: number): Transaction {
+  return {
+    id,
+    ...e,
+    currency: 'ETB',
+    smsId: null,
+    dedupKey: MANUAL_KEY + id,
+    categoryManual: true,
+    needsReview: false,
+    rawText: null,
+    createdAt: now,
+  };
 }

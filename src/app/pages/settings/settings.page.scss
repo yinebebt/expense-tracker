@@ -3,6 +3,30 @@ ion-content {
   --padding-bottom: var(--ion-safe-area-bottom, 0px);
 }
 
-.action {
-  color: var(--ion-color-primary);
+ion-list {
+  padding-bottom: 0;
+}
+
+// A section's buttons, side by side under its rows, on the same surface as the rows.
+.actions {
+  background: var(--ion-item-background, var(--ion-background-color));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px 6px;
+
+  ion-button {
+    margin: 0;
+    --border-radius: 8px;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+}
+
+.hint {
+  margin: 0;
+  padding: 2px 16px 8px;
+  background: var(--ion-item-background, var(--ion-background-color));
+  font-size: 0.8rem;
+  color: var(--viz-muted);
 }

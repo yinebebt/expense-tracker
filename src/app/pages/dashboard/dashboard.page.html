@@ -142,6 +142,36 @@
       }
     </section>
 
+    <section class="period">
+      <header class="period-head">
+        <h2>Accounts</h2>
+        <span class="when">latest balance</span>
+      </header>
+      @if (balances().length) {
+        <div class="figure">{{ amountHidden() ? 'ETB ****' : fmt(balanceTotal()) }}</div>
+        <ion-list class="rows">
+          @for (b of balances(); track b.source) {
+            <ion-item [button]="true" [detail]="false" (click)="txDetail.editBalance(b.source)">
+              <ion-label>
+                <h3>{{ b.source }}</h3>
+                <p>{{ b.manual ? 'Typed in' : 'From SMS' }} · {{ b.at | date: 'd MMM' }}</p>
+              </ion-label>
+              <ion-note slot="end" class="balance">
+                {{ amountHidden() ? '****' : fmt(b.balanceMinor) }}
+              </ion-note>
+            </ion-item>
+          }
+        </ion-list>
+      } @else {
+        <p class="muted inset">No balance yet. Bank SMS that state one fill this in.</p>
+      }
+      <div class="inset">
+        <button type="button" class="link" (click)="txDetail.editBalance()">
+          Update a balance
+        </button>
+      </div>
+    </section>
+
     @if (reviewCount()) {
       <ion-list class="rows" lines="none">
         <ion-item routerLink="/tabs/transactions" [queryParams]="{ q: 'review' }" [detail]="true">

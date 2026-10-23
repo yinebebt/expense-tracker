@@ -11,6 +11,7 @@ import {
   IonIcon,
   IonItem,
   IonLabel,
+  IonNote,
   IonList,
   IonListHeader,
   IonProgressBar,
@@ -68,6 +69,7 @@ function readFlag(key: string): boolean {
     IonList,
     IonItem,
     IonLabel,
+    IonNote,
     IonProgressBar,
     IonRefresher,
     IonRefresherContent,
@@ -89,6 +91,10 @@ export class DashboardPage {
   protected readonly reviewCount = computed(
     () => this.txService.transactions().filter((t) => t.needsReview).length,
   );
+  protected readonly balances = this.txService.balances;
+  protected readonly balanceTotal = computed(() =>
+    this.balances().reduce((sum, b) => sum + b.balanceMinor, 0),
+  );
   /** The day picked in the week chart; null means today. */
   protected readonly dayIndex = signal<number | null>(null);
   protected readonly todayIndex = computed(() =>
@@ -109,7 +115,7 @@ export class DashboardPage {
   });
 
   protected readonly fmt = formatMinor;
-  /** Masks the day's total, e.g. when someone else can see the screen. Remembered on this phone. */
+  /** Masks the day's total and the balances, e.g. when someone else can see the screen. Remembered on this phone. */
   protected readonly amountHidden = signal(readFlag(HIDE_AMOUNT_KEY));
 
   constructor() {

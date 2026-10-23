@@ -122,7 +122,7 @@ export class SettingsPage {
   protected async confirmClear(): Promise<void> {
     const alert = await this.alerts.create({
       header: 'Delete all transactions?',
-      message: `Transactions added by hand are deleted too; SMS ones come back on the next check (last ${IMPORT_WINDOW_DAYS} days). Payee categories are kept.`,
+      message: `Transactions added by hand are deleted too; SMS ones come back on the next check (last ${IMPORT_WINDOW_DAYS} days). Payee categories and balances you typed in are kept.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Delete', role: 'destructive', handler: () => this.clear() },

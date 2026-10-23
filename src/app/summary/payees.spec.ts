@@ -21,6 +21,7 @@ const tx = (
   categoryManual: false,
   needsReview: false,
   rawText: null,
+  balanceMinor: null,
   createdAt: 0,
   ...p,
 });

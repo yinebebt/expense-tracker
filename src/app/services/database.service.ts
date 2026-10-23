@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   category_manual INTEGER NOT NULL DEFAULT 0,
   needs_review INTEGER NOT NULL DEFAULT 0,
   raw_text TEXT,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  balance_minor INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_occurred_at ON transactions (occurred_at);
 CREATE TABLE IF NOT EXISTS meta (
@@ -32,9 +33,15 @@ CREATE TABLE IF NOT EXISTS payee_rules (
   payee_key TEXT PRIMARY KEY NOT NULL,
   category TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS account_balances (
+  source TEXT PRIMARY KEY NOT NULL,
+  balance_minor INTEGER NOT NULL,
+  at INTEGER NOT NULL
+);
 `;
 
-const COLUMNS = [
+/** Column order of toRow() and INSERT_SQL. */
+export const COLUMNS = [
   'id',
   'amount_minor',
   'currency',
@@ -50,6 +57,7 @@ const COLUMNS = [
   'needs_review',
   'raw_text',
   'created_at',
+  'balance_minor',
 ];
 
 /**
@@ -61,7 +69,8 @@ export const INSERT_SQL = `INSERT INTO transactions (${COLUMNS.join(', ')}) VALU
 ON CONFLICT (dedup_key) DO UPDATE SET
   merchant = excluded.merchant,
   category = CASE WHEN category_manual THEN category ELSE excluded.category END,
-  category_manual = category_manual OR excluded.category_manual`;
+  category_manual = category_manual OR excluded.category_manual,
+  balance_minor = excluded.balance_minor`;
 
 const SUPERSEDED_REVIEW_SQL = `DELETE FROM transactions WHERE type = 'unknown' AND sms_id = ? AND source = ?`;
 
@@ -82,6 +91,7 @@ export function toRow(t: Transaction): unknown[] {
     t.needsReview ? 1 : 0,
     t.rawText,
     t.createdAt,
+    t.balanceMinor,
   ];
 }
 
@@ -102,7 +112,16 @@ export function fromRow(r: Record<string, any>): Transaction {
     needsReview: r['needs_review'] === 1,
     rawText: r['raw_text'] ?? null,
     createdAt: r['created_at'],
+    balanceMinor: r['balance_minor'] ?? null,
   };
+}
+
+/** Brings an existing database up to SCHEMA. CREATE TABLE IF NOT EXISTS can't add columns. */
+async function migrate(db: SQLiteDBConnection): Promise<void> {
+  const cols = (await db.query('PRAGMA table_info(transactions)')).values ?? [];
+  if (!cols.some((c) => c.name === 'balance_minor')) {
+    await db.execute('ALTER TABLE transactions ADD COLUMN balance_minor INTEGER;');
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -132,10 +151,10 @@ export class DatabaseService {
         : await this.sqlite.createConnection(DB_NAME, false, 'no-encryption', 1, false);
     await db.open();
     await db.execute(SCHEMA);
+    await migrate(db);
     return db;
   }
 
-  /** Returns how many rows were actually added. */
   /**
    * Upserts rows and returns how many the table grew by. A row the parser now understands
    * replaces the review row stored earlier for the same SMS: the type is part of the dedup
@@ -224,6 +243,25 @@ export class DatabaseService {
   }
 
   /** Removes all transactions and sync state, so the next sync starts from scratch. Payee rules stay. */
+  /** Balances typed in by hand, by account. */
+  async manualBalances(): Promise<Map<string, { balanceMinor: number; at: number }>> {
+    const db = await this.conn();
+    const res = await db.query('SELECT source, balance_minor, at FROM account_balances');
+    return new Map(
+      (res.values ?? []).map((r) => [r.source, { balanceMinor: r.balance_minor, at: r.at }]),
+    );
+  }
+
+  async setManualBalance(source: string, balanceMinor: number, at: number): Promise<void> {
+    const db = await this.conn();
+    await db.run(
+      `INSERT INTO account_balances (source, balance_minor, at) VALUES (?, ?, ?)
+       ON CONFLICT (source) DO UPDATE SET balance_minor = excluded.balance_minor, at = excluded.at`,
+      [source, balanceMinor, at],
+    );
+    await this.persist();
+  }
+
   async deleteOne(id: string): Promise<void> {
     const db = await this.conn();
     await db.run('DELETE FROM transactions WHERE id = ?', [id]);

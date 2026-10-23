@@ -17,6 +17,7 @@ const tx = (at: Date, amountMinor: number, p: Partial<Transaction> = {}): Transa
   categoryManual: false,
   needsReview: false,
   rawText: null,
+  balanceMinor: null,
   createdAt: 0,
   ...p,
 });

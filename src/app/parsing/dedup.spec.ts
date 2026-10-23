@@ -1,4 +1,4 @@
-import { fromRow, toRow } from '../services/database.service';
+import { COLUMNS, fromRow, toRow } from '../services/database.service';
 import { dedupKey } from './dedup';
 import { FIXTURES } from './fixtures/fictional-sms';
 import { parseSms, toTransaction } from './sms-parser';
@@ -52,24 +52,7 @@ describe('database row mapping', () => {
     const res = parseSms(FIXTURES[0].sms);
     if (res.kind !== 'parsed') throw new Error('fixture not parsed');
     const t = toTransaction(FIXTURES[0].sms, res.tx, 'id-1', 123);
-    const cols = [
-      'id',
-      'amount_minor',
-      'currency',
-      'type',
-      'occurred_at',
-      'merchant',
-      'reference',
-      'source',
-      'sms_id',
-      'dedup_key',
-      'category',
-      'category_manual',
-      'needs_review',
-      'raw_text',
-      'created_at',
-    ];
-    const row = Object.fromEntries(toRow(t).map((v, i) => [cols[i], v]));
+    const row = Object.fromEntries(toRow(t).map((v, i) => [COLUMNS[i], v]));
     expect(fromRow(row)).toEqual(t);
   });
 });

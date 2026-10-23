@@ -68,5 +68,6 @@ android/app/src/main/java/com/yinebebt/expenses/SmsInboxPlugin.kt
 - **Sync:** the first run reads 90 days of SMS; after that the app reads new messages on launch, on resume and on pull-to-refresh. Nothing runs while the app is closed.
 - **Not counted:** messages the parser can't read go to review, and moves between your own accounts are shown separately. Ads are dropped.
 - **Payees:** a category set on a payee applies to all their transactions and to new ones.
+- **Balances:** each account's latest balance comes from its SMS ("current balance is …") or is typed in on the Dashboard.
 
 Design decisions, known gaps and real-SMS formats covered: [docs/HANDOFF.md](docs/HANDOFF.md).

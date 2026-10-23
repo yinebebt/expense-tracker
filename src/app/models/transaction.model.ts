@@ -48,6 +48,8 @@ export interface Transaction {
   needsReview: boolean;
   /** SMS text, kept only for unknown rows so they can be reviewed. */
   rawText: string | null;
+  /** The account balance the SMS reported after this transaction, if it gave one. */
+  balanceMinor: number | null;
   createdAt: number;
 }
 
@@ -67,6 +69,9 @@ export function txTitle(t: Pick<Transaction, 'merchant' | 'type'>): string {
   if (t.type === 'credit') return 'Money in';
   return 'Unrecognised SMS';
 }
+
+/** The account offered first when adding by hand: money no SMS reports. */
+export const CASH = 'Cash';
 
 const MANUAL_KEY = 'manual|';
 
@@ -96,6 +101,7 @@ export function manualTransaction(e: ManualEntry, id: string, now: number): Tran
     categoryManual: true,
     needsReview: false,
     rawText: null,
+    balanceMinor: null,
     createdAt: now,
   };
 }

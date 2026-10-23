@@ -233,6 +233,9 @@ export const PROMO = new RegExp(
 /** Balance phrases, stripped before deciding whether a message still mentions an amount. */
 export const BALANCE_PHRASE = new RegExp(String.raw`(?:balance\b|ቀሪ \S*ሳብ)[^.።]*?` + AMOUNT, 'gi');
 
+/** The same phrase, for reading the balance an SMS reports: "Your current balance is ETB 1,120.40". */
+export const BALANCE = new RegExp(BALANCE_PHRASE.source, 'i');
+
 /** Any amount, for the unknown-message fallback. */
 export const ANY_AMOUNT = re(AMOUNT);
 

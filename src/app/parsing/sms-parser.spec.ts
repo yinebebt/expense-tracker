@@ -69,6 +69,23 @@ describe('parseSms', () => {
     expect(res.kind === 'parsed' && res.tx).toMatchObject({ type: 'unknown', needsReview: true });
   });
 
+  it('reads the balance the SMS reports, in English and Amharic', () => {
+    const balanceOf = (address: string, body: string) => {
+      const res = parseSms({ id: '1', address, date: 0, body });
+      return res.kind === 'parsed' ? res.tx.balanceMinor : undefined;
+    };
+    expect(
+      balanceOf(
+        'CBE',
+        'Your Account 1*****6789 has been debited with ETB 1,250.00 to Kaldis. Your Current Balance is ETB 8,430.55.',
+      ),
+    ).toBe(843055);
+    expect(balanceOf('BOA', 'ከሂሳብ ቁጥርዎ 1*23 ብር 1,250.00 ወጪ ተደርጓል።ቀሪ ሂሳብዎ: ETB 80.00።')).toBe(8000);
+    expect(
+      balanceOf('CBE', 'Your Account 1*****6789 has been credited with ETB 50.00.'),
+    ).toBeNull();
+  });
+
   it('sends a message with conflicting debit and credit wording to review', () => {
     const res = parseSms({
       id: '1',

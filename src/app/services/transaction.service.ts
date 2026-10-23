@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import {
+  CASH,
   Category,
   isManual,
   ManualEntry,
@@ -9,6 +10,7 @@ import {
 } from '../models/transaction.model';
 import { parseSms, toTransaction } from '../parsing/sms-parser';
 import { findSelfTransfers, SELF_TRANSFER_WINDOW_MS } from '../parsing/transfers';
+import { accountBalances } from '../summary/balances';
 import { groupByPayee, payeeKey, payeeRuleCategory } from '../summary/payees';
 import { summarize } from '../summary/summary';
 import { DatabaseService } from './database.service';
@@ -23,17 +25,38 @@ export interface ImportResult {
 export class TransactionService {
   private readonly db = inject(DatabaseService);
   private readonly all = signal<Transaction[]>([]);
+  private readonly manualBalances = signal(new Map<string, { balanceMinor: number; at: number }>());
   private rules = new Map<string, Category>();
 
   /** Newest first. */
   readonly transactions = this.all.asReadonly();
   readonly summary = computed(() => summarize(this.all()));
   readonly payees = computed(() => groupByPayee(this.all()));
+  readonly balances = computed(() => accountBalances(this.all(), this.manualBalances()));
+  /** Cash first, then every account with transactions or a balance, busiest first. */
+  readonly accounts = computed(() => {
+    const counts = new Map<string, number>();
+    for (const t of this.all()) counts.set(t.source, (counts.get(t.source) ?? 0) + 1);
+    for (const s of this.manualBalances().keys()) counts.set(s, counts.get(s) ?? 0);
+    const seen = [...counts].sort((a, b) => b[1] - a[1]).map(([s]) => s);
+    return [CASH, ...seen.filter((s) => s !== CASH)];
+  });
 
   async load(): Promise<void> {
-    const [txs, rules] = await Promise.all([this.db.all(), this.db.payeeRules()]);
+    const [txs, rules, balances] = await Promise.all([
+      this.db.all(),
+      this.db.payeeRules(),
+      this.db.manualBalances(),
+    ]);
     this.rules = rules;
+    this.manualBalances.set(balances);
     this.all.set(txs);
+  }
+
+  /** Records an account's balance typed in by hand, e.g. Cash or a bank that sends no SMS. */
+  async setBalance(source: string, balanceMinor: number, at: number): Promise<void> {
+    await this.db.setManualBalance(source, balanceMinor, at);
+    await this.load();
   }
 
   /** Parses and stores messages. Messages that were imported before are skipped by dedup key. */

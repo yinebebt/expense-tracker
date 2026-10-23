@@ -5,6 +5,7 @@ import { dedupKey } from './dedup';
 import {
   AMHARIC_CURRENCY,
   ANY_AMOUNT,
+  BALANCE,
   BALANCE_PHRASE,
   OTP,
   PROMO,
@@ -28,6 +29,7 @@ export interface ParsedTx {
   reference: string | null;
   category: Category | null;
   needsReview: boolean;
+  balanceMinor: number | null;
 }
 
 export type ParseResult =
@@ -67,7 +69,13 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
   if (OTP.test(body)) return { kind: 'ignored', reason: 'otp' };
 
   const reference = REFERENCE.exec(body)?.groups?.['ref']?.toUpperCase() ?? null;
-  const base = { source: rule.source, currency: 'ETB', reference };
+  const balance = BALANCE.exec(body)?.groups?.['amount'];
+  const base = {
+    source: rule.source,
+    currency: 'ETB',
+    reference,
+    balanceMinor: balance ? parseAmountMinor(balance) : null,
+  };
 
   if (REVERSAL.test(body)) {
     return {
@@ -146,6 +154,7 @@ export function toTransaction(sms: RawSms, tx: ParsedTx, id: string, now: number
     categoryManual: false,
     needsReview: tx.needsReview,
     rawText: tx.type === 'unknown' ? sms.body.slice(0, MAX_BODY) : null,
+    balanceMinor: tx.balanceMinor,
     createdAt: now,
   };
 }

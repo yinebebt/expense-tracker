@@ -18,6 +18,7 @@ const tx = (p: Partial<Transaction>): Transaction => ({
   categoryManual: false,
   needsReview: false,
   rawText: null,
+  balanceMinor: null,
   createdAt: 0,
   ...p,
 });

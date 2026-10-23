@@ -10,17 +10,9 @@ import {
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { parseAmountMinor } from '../models/money';
-import { CATEGORIES, Category, CATEGORY_LABELS } from '../models/transaction.model';
+import { localInputValue } from '../models/dates';
+import { CASH, CATEGORIES, Category, CATEGORY_LABELS } from '../models/transaction.model';
 import { TransactionService } from '../services/transaction.service';
-
-const CASH = 'Cash';
-
-/** "2026-10-23T08:05" in local time, the value a datetime-local input takes. */
-function localInputValue(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 /** Adds a transaction by hand, e.g. a cash payment no SMS reports. Opened by TxDetailService. */
 @Component({
@@ -183,14 +175,7 @@ export class TxAddComponent {
   /** Once the user picks a category, typing a payee no longer changes it. */
   private categoryPicked = false;
 
-  /** Cash first, then the accounts that already have transactions, busiest first. */
-  protected readonly accounts = computed(() => {
-    const counts = new Map<string, number>();
-    for (const t of this.txService.transactions())
-      counts.set(t.source, (counts.get(t.source) ?? 0) + 1);
-    const seen = [...counts].sort((a, b) => b[1] - a[1]).map(([s]) => s);
-    return [CASH, ...seen.filter((s) => s !== CASH)];
-  });
+  protected readonly accounts = this.txService.accounts;
 
   private readonly amountMinor = computed(() => parseAmountMinor(this.amountText()));
   private readonly occurredAt = computed(() => new Date(this.date()).getTime());

@@ -4,3 +4,8 @@ export function localInputValue(ms: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+/** "2026-10-23" in local time, the value a date input takes. */
+export function localDateValue(ms: number): string {
+  return localInputValue(ms).slice(0, 10);
+}

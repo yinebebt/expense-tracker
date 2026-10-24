@@ -23,6 +23,15 @@ ion-list {
   }
 }
 
+.import-start {
+  padding: 6px 8px;
+  border: 1px solid var(--viz-baseline);
+  border-radius: 8px;
+  background: none;
+  color: var(--ion-text-color);
+  font-size: 0.9rem;
+}
+
 .hint {
   margin: 0;
   padding: 2px 16px 8px;

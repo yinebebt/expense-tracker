@@ -6,6 +6,12 @@ Runs offline, with no backend, account or analytics; release builds carry no int
 
 Angular 22 · Ionic 9 · Capacitor 8 · SQLite · a small Kotlin plugin for the SMS inbox. Android only: iOS doesn't let apps read SMS.
 
+<p align="center">
+  <img src="public/screenshots/welcome.jpg" width="260" alt="First-run welcome screen">
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="public/screenshots/settings.jpg" width="260" alt="Settings: import cutoff, re-read, export, about">
+</p>
+
 ## Install
 
 1. Download `expense-tracker-<version>.apk` from the [latest release](https://github.com/yinebebt/expense-tracker/releases/latest) on the phone and open it. Android asks to allow installs from your browser or file manager.

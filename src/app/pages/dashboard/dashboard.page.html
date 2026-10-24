@@ -37,11 +37,6 @@
 </ion-header>
 
 <ion-content [scrollY]="!hasData()">
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button aria-label="Add transaction" (click)="txDetail.add()">
-      <ion-icon name="add" />
-    </ion-fab-button>
-  </ion-fab>
   <ion-refresher slot="fixed" [disabled]="!!scrolledDown()[view()]" (ionRefresh)="refresh($event)">
     <ion-refresher-content />
   </ion-refresher>

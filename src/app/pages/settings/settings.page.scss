@@ -21,6 +21,10 @@ ion-list {
     text-transform: none;
     letter-spacing: normal;
   }
+
+  &.centered {
+    justify-content: center;
+  }
 }
 
 .import-start {
@@ -38,4 +42,9 @@ ion-list {
   background: var(--ion-item-background, var(--ion-background-color));
   font-size: 0.8rem;
   color: var(--viz-muted);
+}
+
+.version {
+  text-align: center;
+  padding-top: 8px;
 }

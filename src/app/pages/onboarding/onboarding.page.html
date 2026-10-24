@@ -1,0 +1,102 @@
+<ion-content class="onboarding" [scrollY]="false">
+  <ion-progress-bar [value]="progress()" />
+
+  <div class="page">
+    <div class="panel-wrap">
+      <section class="panel">
+        <span class="emoji">{{ emoji() }}</span>
+
+        @switch (step()) {
+          @case ('welcome') {
+            <h1>Hey there</h1>
+            <p>
+              Expense Tracker turns the bank and wallet SMS you already get into a clear picture
+              of your spending. No typing, no account, no cloud — just your phone.
+            </p>
+          }
+          @case ('how-it-works') {
+            <h1>Here's the magic</h1>
+            <ul>
+              <li>Reads SMS from the banks and wallets it recognizes.</li>
+              <li>Parses the amount, merchant and date, and sorts it into a category.</li>
+              <li>Everything stays on your phone — nothing is sent anywhere.</li>
+              <li>Add cash spending by hand, fix any category, export to CSV any time.</li>
+            </ul>
+          }
+          @case ('permission') {
+            <h1>One quick permission</h1>
+            <p>
+              To read those bank messages, the app needs SMS access. Nothing leaves your phone,
+              and you can change this anytime in Settings.
+            </p>
+            <div class="action">
+              @switch (sync.access()) {
+                @case ('prompt') {
+                  <ion-button shape="round" (click)="sync.requestAccess()">Allow SMS access</ion-button>
+                }
+                @case ('denied') {
+                  <ion-button shape="round" (click)="sync.openAppSettings()">Open app settings</ion-button>
+                  <p class="hint">Permissions → SMS → Allow. Greyed out? ⋮ → Allow restricted settings.</p>
+                }
+                @case ('granted') {
+                  <p class="granted">✓ Access granted</p>
+                }
+                @case ('unavailable') {
+                  <p class="hint">SMS reading isn't available on this device; you can still add transactions by hand.</p>
+                }
+                @default {
+                  <p class="hint">Checking…</p>
+                }
+              }
+            </div>
+          }
+          @case ('import-start') {
+            <h1>Pick a starting point</h1>
+            <p>How far back should we look? Anything older stays right where it is — on your phone, untouched.</p>
+            <div class="action">
+              <div class="presets">
+                <ion-button size="small" fill="outline" shape="round" (click)="setPreset(0)">Today</ion-button>
+                <ion-button size="small" fill="outline" shape="round" (click)="setPreset(7)">Last 7 days</ion-button>
+                <ion-button size="small" fill="outline" shape="round" (click)="setPreset(30)">Last 30 days</ion-button>
+                <ion-button size="small" fill="outline" shape="round" (click)="setPreset(null)">
+                  Last {{ windowDays }} days (default)
+                </ion-button>
+              </div>
+              <label class="custom-date">
+                Or pick a date
+                <input
+                  type="date"
+                  aria-label="Import start date"
+                  [value]="importStartInput()"
+                  (change)="setImportStart($any($event.target).value)"
+                />
+              </label>
+            </div>
+          }
+        }
+      </section>
+    </div>
+
+    <div class="nav">
+      @if (index() > 0) {
+        <ion-button fill="outline" shape="round" (click)="back()">
+          <ion-icon slot="start" name="arrow-back-outline" />
+          Back
+        </ion-button>
+      } @else {
+        <span></span>
+      }
+      @if (index() < steps.length - 1) {
+        <ion-button shape="round" (click)="next()">
+          Next
+          <ion-icon slot="end" name="arrow-forward-outline" />
+        </ion-button>
+      } @else {
+        <ion-button shape="round" (click)="finish()">
+          {{ replay ? 'Done' : 'Get started' }}
+          <ion-icon slot="end" name="checkmark-outline" />
+        </ion-button>
+      }
+    </div>
+  </div>
+</ion-content>

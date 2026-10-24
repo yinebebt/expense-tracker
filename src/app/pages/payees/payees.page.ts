@@ -12,6 +12,7 @@ import {
   IonListHeader,
   IonNote,
   IonRouterLink,
+  IonSearchbar,
   IonSegment,
   IonSegmentButton,
   IonTitle,
@@ -40,6 +41,7 @@ const FREQUENT = 5;
     IonButtons,
     IonButton,
     IonIcon,
+    IonSearchbar,
     IonSegment,
     IonSegmentButton,
     IonLabel,
@@ -58,14 +60,17 @@ export class PayeesPage {
 
   protected readonly frequent = FREQUENT;
   protected readonly filter = signal<Filter>('all');
+  protected readonly query = signal('');
   protected readonly fmt = formatMinor;
 
   private readonly split = computed(() => {
     const min = this.filter() === 'frequent' ? FREQUENT : 1;
+    const q = this.query().trim().toLowerCase();
     const people: PayeeSummary[] = [];
     const ownAccounts: PayeeSummary[] = [];
     for (const p of this.txService.payees()) {
       if (p.count < min) continue;
+      if (q && !p.name.toLowerCase().includes(q)) continue;
       (this.categoryOf(p) === 'transfers' ? ownAccounts : people).push(p);
     }
     return { people, ownAccounts };
@@ -75,6 +80,11 @@ export class PayeesPage {
   protected readonly payees = computed(() => this.split().people);
   /** The user's own accounts, kept apart because moving money between them isn't spending. */
   protected readonly ownAccounts = computed(() => this.split().ownAccounts);
+
+  /** Paid total across the listed people, shown next to the count. */
+  protected readonly paidTotal = computed(() =>
+    this.payees().reduce((sum, p) => sum + p.paidMinor, 0),
+  );
 
   protected readonly hasAny = computed(() => this.txService.payees().length > 0);
 

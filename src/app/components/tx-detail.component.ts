@@ -259,7 +259,7 @@ export class TxDetailComponent implements OnInit {
       el.remove();
     }
     const toast = await this.toasts.create({
-      message: ok ? 'Copied. Remove names and account numbers before sending it.' : 'Copy failed',
+      message: ok ? 'Copied — strip names and numbers first.' : 'Copy failed',
       duration: 3000,
     });
     await toast.present();

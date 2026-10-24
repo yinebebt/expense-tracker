@@ -9,3 +9,11 @@ export function localInputValue(ms: number): string {
 export function localDateValue(ms: number): string {
   return localInputValue(ms).slice(0, 10);
 }
+
+/** Midnight, local time, `days` ago (0 = today). */
+export function daysAgo(days: number): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - days);
+  return d.getTime();
+}

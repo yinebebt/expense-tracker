@@ -37,6 +37,20 @@
         <ion-label class="ion-text-wrap" color="danger">{{ e }}</ion-label>
       </ion-item>
     }
+    <ion-item>
+      <ion-label>
+        Import from
+        <p>Default reads the last {{ windowDays }} days.</p>
+      </ion-label>
+      <input
+        class="import-start"
+        type="date"
+        aria-label="Import start date"
+        slot="end"
+        [value]="importStartInput()"
+        (change)="setImportStart($any($event.target).value)"
+      />
+    </ion-item>
   </ion-list>
   @if (sync.access() !== 'unavailable') {
     <div class="actions">
@@ -58,7 +72,7 @@
             [disabled]="sync.syncing()"
             (click)="sync.reimport()"
           >
-            Re-read {{ windowDays }} days
+            {{ reimportLabel() }}
           </ion-button>
         }
       }

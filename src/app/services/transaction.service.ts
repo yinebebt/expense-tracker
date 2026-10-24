@@ -129,4 +129,10 @@ export class TransactionService {
     await this.db.clear();
     await this.load();
   }
+
+  /** Drops SMS-sourced rows before `occurredAt`; rows added by hand are kept. */
+  async deleteSmsBefore(occurredAt: number): Promise<void> {
+    await this.db.deleteSmsBefore(occurredAt);
+    await this.load();
+  }
 }

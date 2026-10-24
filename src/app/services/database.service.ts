@@ -268,6 +268,13 @@ export class DatabaseService {
     await this.persist();
   }
 
+  /** Drops SMS-sourced rows before `occurredAt`, e.g. after moving the import cutoff later. Rows added by hand are kept. */
+  async deleteSmsBefore(occurredAt: number): Promise<void> {
+    const db = await this.conn();
+    await db.run('DELETE FROM transactions WHERE occurred_at < ? AND sms_id IS NOT NULL', [occurredAt]);
+    await this.persist();
+  }
+
   async clear(): Promise<void> {
     const db = await this.conn();
     await db.execute('DELETE FROM transactions; DELETE FROM meta;');

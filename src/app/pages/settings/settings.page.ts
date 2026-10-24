@@ -21,6 +21,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { downloadOutline, refresh, trashOutline } from 'ionicons/icons';
+import { localDateValue } from '../../models/dates';
 import { SOURCES } from '../../parsing/rules';
 import { ExportService } from '../../services/export.service';
 import { IMPORT_WINDOW_DAYS, SmsSyncService } from '../../services/sms-sync.service';
@@ -74,6 +75,17 @@ export class SettingsPage {
     return a ? ACCESS_TEXT[a] : null;
   });
 
+  /** Value for the "import from" date input; empty means the default window. */
+  protected readonly importStartInput = computed(() => {
+    const v = this.sync.importStart();
+    return v === null ? '' : localDateValue(v);
+  });
+
+  protected readonly reimportLabel = computed(() => {
+    const v = this.sync.importStart();
+    return v === null ? `Re-read ${this.windowDays} days` : `Re-read from ${localDateValue(v)}`;
+  });
+
   constructor() {
     addIcons({ refresh, downloadOutline, trashOutline });
     App.getInfo()
@@ -97,10 +109,17 @@ export class SettingsPage {
     await toast.present();
   }
 
+  /** `value` is a date-input string ("2026-10-24"), or empty to go back to the default window. */
+  protected setImportStart(value: string): void {
+    void this.sync.setImportStart(value ? new Date(`${value}T00:00`).getTime() : null);
+  }
+
   protected async confirmClear(): Promise<void> {
+    const since = this.sync.importStart();
+    const window = since === null ? `last ${IMPORT_WINDOW_DAYS} days` : `from ${localDateValue(since)}`;
     const alert = await this.alerts.create({
       header: 'Delete all transactions?',
-      message: `Transactions added by hand are deleted too; SMS ones come back on the next check (last ${IMPORT_WINDOW_DAYS} days). Payee categories and balances you typed in are kept.`,
+      message: `Transactions added by hand are deleted too; SMS ones come back on the next check (${window}). Payee categories and balances you typed in are kept.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Delete', role: 'destructive', handler: () => this.clear() },

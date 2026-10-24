@@ -10,7 +10,6 @@
 
 <ion-content>
   <ion-list lines="full">
-    <ion-list-header>SMS</ion-list-header>
     <ion-item>
       <ion-label>
         Access
@@ -62,13 +61,13 @@
           <ion-button size="small" (click)="sync.openAppSettings()">Open app settings</ion-button>
         }
         @case ('granted') {
-          <ion-button size="small" [disabled]="sync.syncing()" (click)="sync.sync()">
+          <ion-button size="small" fill="clear" [disabled]="sync.syncing()" (click)="sync.sync()">
             <ion-icon slot="start" name="refresh" />
             Check now
           </ion-button>
           <ion-button
             size="small"
-            fill="outline"
+            fill="clear"
             [disabled]="sync.syncing()"
             (click)="sync.reimport()"
           >
@@ -79,14 +78,13 @@
     </div>
   }
   @if (sync.access() === 'denied') {
-    <p class="hint">Permissions → SMS → Allow. Greyed out? ⋮ → Allow restricted settings.</p>
+    <p class="hint">Settings → Permissions → SMS. Greyed out? ⋮ → Allow restricted settings.</p>
   }
 
   <ion-list lines="full">
-    <ion-list-header>Banks and wallets</ion-list-header>
     <ion-item [button]="true" [detail]="false" (click)="showSupported.set(!showSupported())">
       <ion-label class="ion-text-wrap">
-        Supported
+        Supported sources
         @if (showSupported()) {
           <p>{{ supported.join(', ') }}</p>
         }
@@ -99,13 +97,13 @@
     <ion-list-header>Data</ion-list-header>
   </ion-list>
   <div class="actions">
-    <ion-button size="small" fill="outline" [disabled]="busy() || !count()" (click)="exportCsv()">
+    <ion-button size="small" fill="clear" [disabled]="busy() || !count()" (click)="exportCsv()">
       <ion-icon slot="start" name="download-outline" />
       Export CSV
     </ion-button>
     <ion-button
       size="small"
-      fill="outline"
+      fill="clear"
       color="danger"
       [disabled]="busy() || !count()"
       (click)="confirmClear()"
@@ -117,15 +115,14 @@
 
   <ion-list lines="full">
     <ion-list-header>About</ion-list-header>
-    <ion-item>
-      <ion-label>Version</ion-label>
-      <ion-note slot="end">{{ version() }}</ion-note>
-    </ion-item>
-    <ion-item lines="none" href="https://github.com/yinebebt" target="_blank" [detail]="true">
-      <ion-label>
-        Built by Yinebeb T.
-        <p>github.com/yinebebt</p>
-      </ion-label>
-    </ion-item>
   </ion-list>
+  <div class="actions centered">
+    <ion-button size="small" fill="clear" [routerLink]="['/onboarding']" [queryParams]="{ replay: 1 }">
+      How it works
+    </ion-button>
+    <ion-button size="small" fill="clear" href="https://github.com/yinebebt" target="_blank">
+      Built by Yinebeb T.
+    </ion-button>
+  </div>
+  <p class="hint version">v{{ version() }}</p>
 </ion-content>

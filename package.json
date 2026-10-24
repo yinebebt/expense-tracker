@@ -1,7 +1,7 @@
 {
   "name": "expense-tracker",
-  "version": "0.2.0",
-  "versionCode": 6,
+  "version": "0.2.1",
+  "versionCode": 7,
   "license": "MIT",
   "scripts": {
     "ng": "ng",

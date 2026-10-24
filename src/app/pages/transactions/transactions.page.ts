@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -35,14 +34,24 @@ import { SmsSyncService } from '../../services/sms-sync.service';
 import { TransactionService } from '../../services/transaction.service';
 import { DateRange, isCounted, monthRange, weekRange } from '../../summary/summary';
 
-type Period = 'week' | 'month' | 'lastMonth' | 'custom';
+type Period = 'week' | 'month' | 'custom';
 
 const PERIODS: { value: Period; label: string }[] = [
   { value: 'week', label: 'This week' },
   { value: 'month', label: 'This month' },
-  { value: 'lastMonth', label: 'Last month' },
   { value: 'custom', label: 'Pick dates' },
 ];
+
+const DAY = 86_400_000;
+
+/** "Today", "Yesterday", or the weekday and date. */
+function dayLabel(day: number): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (day === today) return 'Today';
+  if (day === today - DAY) return 'Yesterday';
+  return new Date(day).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 /** "2026-10-23" from a date input, as local midnight. */
 function parseDay(value: string): Date | null {
@@ -60,7 +69,6 @@ interface DayGroup {
 @Component({
   selector: 'app-transactions',
   imports: [
-    DatePipe,
     RouterLink,
     IonRouterLink,
     IonHeader,
@@ -141,7 +149,7 @@ interface DayGroup {
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
-      @if (filtering() && groups().length) {
+      @if (groups().length) {
         <p class="totals">
           {{ totals().count }} {{ totals().count === 1 ? 'transaction' : 'transactions' }}
           @if (totals().spent) {
@@ -151,13 +159,11 @@ interface DayGroup {
             · in {{ fmt(totals().received) }}
           }
         </p>
-      }
-      @if (groups().length) {
         <ion-list>
           @for (g of groups(); track g.day) {
             <ion-item-group>
               <ion-item-divider sticky>
-                <ion-label>{{ g.day | date: 'EEEE d MMMM' }}</ion-label>
+                <ion-label>{{ dayLabel(g.day) }}</ion-label>
                 @if (g.spentMinor) {
                   <ion-note slot="end" class="day-total">{{ fmt(g.spentMinor) }}</ion-note>
                 }
@@ -250,6 +256,7 @@ export class TransactionsPage {
   protected readonly to = signal('');
   protected readonly flow = signal<'debit' | 'credit' | null>(null);
   protected readonly fmt = formatMinor;
+  protected readonly dayLabel = dayLabel;
 
   protected readonly filtering = computed(
     () => !!this.query().trim() || this.range() !== null || this.flow() !== null,
@@ -262,8 +269,6 @@ export class TransactionsPage {
         return weekRange(now);
       case 'month':
         return monthRange(now);
-      case 'lastMonth':
-        return monthRange(new Date(now.getFullYear(), now.getMonth() - 1, 1));
       case 'custom': {
         const from = parseDay(this.from());
         const to = parseDay(this.to());

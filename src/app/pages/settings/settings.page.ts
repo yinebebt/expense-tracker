@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { App } from '@capacitor/app';
 import {
   AlertController,
@@ -38,6 +39,7 @@ const ACCESS_TEXT = {
   selector: 'app-settings',
   imports: [
     DatePipe,
+    RouterLink,
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -119,7 +121,7 @@ export class SettingsPage {
     const window = since === null ? `last ${IMPORT_WINDOW_DAYS} days` : `from ${localDateValue(since)}`;
     const alert = await this.alerts.create({
       header: 'Delete all transactions?',
-      message: `Transactions added by hand are deleted too; SMS ones come back on the next check (${window}). Payee categories and balances you typed in are kept.`,
+      message: `Hand-added ones are gone for good. SMS ones return on the next check (${window}); categories and balances stay.`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Delete', role: 'destructive', handler: () => this.clear() },

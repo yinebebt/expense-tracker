@@ -1,8 +1,15 @@
 import { Routes } from '@angular/router';
+import { requireOnboarding, skipIfOnboarded } from './guards/onboarding.guard';
 
 export const routes: Routes = [
   {
+    path: 'onboarding',
+    canActivate: [skipIfOnboarded],
+    loadComponent: () => import('./pages/onboarding/onboarding.page').then((m) => m.OnboardingPage),
+  },
+  {
     path: 'tabs',
+    canActivate: [requireOnboarding],
     loadComponent: () => import('./pages/tabs.page').then((m) => m.TabsPage),
     children: [
       {

@@ -1,7 +1,15 @@
-.hint {
-  margin: 12px 16px 4px;
+.totals {
+  margin: 0;
+  padding: 10px 16px 4px;
   font-size: 0.85rem;
-  color: var(--ion-color-medium);
+  color: var(--viz-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  margin: 16px 16px 4px;
+  font-size: 0.8rem;
+  color: var(--viz-muted);
 }
 
 .own {

@@ -2,7 +2,7 @@
 
 Android app that reads Ethiopian bank and mobile-money SMS, stores the transactions in SQLite on the phone, and shows spending by day, week, month, category and payee. Transactions can also be added by hand and exported as CSV.
 
-No backend, no account, no analytics. Release builds have no internet permission.
+Runs offline, with no backend, account or analytics; release builds carry no internet permission.
 
 Angular 22 · Ionic 9 · Capacitor 8 · SQLite · a small Kotlin plugin for the SMS inbox. Android only: iOS doesn't let apps read SMS.
 
@@ -13,10 +13,12 @@ Angular 22 · Ionic 9 · Capacitor 8 · SQLite · a small Kotlin plugin for the 
 
 Updates install over the previous version and keep your data. Each release lists a `SHA256SUMS` file, and every APK is signed with the certificate whose SHA-256 is `deac7052 58b67b5e a17504c5 4a590e26 f4b0aa2b 2c077be3 ee9ada92 675965c1` (`apksigner verify --print-certs` shows it).
 
+Releases are built and published by a [GitHub Actions workflow](.github/workflows/release.yml), triggered by a version tag.
+
 ## What it does with your SMS
 
 - **Permissions:** `READ_SMS` only. The native side passes on messages from known bank and wallet senders; other SMS never reach the app, and nothing leaves the phone.
-- **Sync:** the first run reads 90 days of SMS. After that the app reads new messages on launch, on resume, when one arrives while it's open, and on pull-to-refresh. Nothing runs while the app is closed.
+- **Sync:** a short first-run setup asks how far back to read (today, a week, a month, or 90 days by default) — change it later in Settings → Import from. After that the app reads new messages on launch, on resume, when one arrives while it's open, and on pull-to-refresh. Nothing runs while the app is closed. Moving the cutoff later also drops the SMS rows before it; moving it earlier needs a Settings → Re-read.
 - **Not counted:** messages the parser can't read go to review, and moves between your own accounts are shown separately. Ads are dropped.
 - **Payees:** a category set on a payee applies to all their transactions and to new ones.
 - **Balances:** each account's latest balance comes from its SMS ("current balance is …") or is typed in.
@@ -68,7 +70,8 @@ src/app/
   summary/     totals, payee grouping, CSV export
   services/    database, import pipeline, SMS sync, native plugin wrapper
   components/  rows, charts, detail and add dialogs
-  pages/       Dashboard, Transactions, Payees, Settings
+  pages/       Onboarding, Dashboard, Transactions, Payees, Settings
+  guards/      onboarding redirect, for the routes in app.routes.ts
 android/app/src/main/java/com/yinebebt/expenses/SmsInboxPlugin.kt
                reads the inbox (known senders only), saves the CSV export
 ```
@@ -81,25 +84,6 @@ Design notes:
 - **The dedup key includes the type,** so a reversal quoting the original reference isn't dropped.
 - **Ads are dropped only on ad-only signals** and only when no transaction pattern matched, so an unknown real transaction lands in review instead of vanishing.
 - **sql.js is pinned to 1.12.0.** The browser SQLite (jeep-sqlite) embeds that version's JavaScript; a newer `sql-wasm.wasm` fails to load.
-
-## Releasing
-
-The version lives only in `package.json`: `version` (shown in the app) and `versionCode` (Android build number, +1 per release). Android installs an update only when `versionCode` is higher.
-
-```bash
-npm version 0.2.0 --no-git-tag-version   # sets the version and bumps versionCode
-git commit -am "…"
-git tag v0.2.0
-git push && git push origin v0.2.0
-```
-
-The tag starts the [Release workflow](.github/workflows/release.yml): it runs the tests, checks the tag matches `package.json`, builds the APK, checks it's signed with the release key and publishes it with `SHA256SUMS` as a GitHub release. Running the workflow by hand builds the APK as a run artifact without publishing.
-
-**Signing key:** the release keystore and `android/keystore.properties` (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`) stay out of git; back them up, since no update installs over existing copies without them. Locally, both debug and release builds are signed with it when the file exists, so a debug build installs over a release without losing data. CI gets the same key from four repository secrets: `KEYSTORE_BASE64` (the keystore, base64), `KEYSTORE_PASSWORD`, `KEY_ALIAS` and `KEY_PASSWORD`.
-
-To build a release APK locally instead: `npm run apk:release` → `android/app/build/outputs/apk/release/app-release.apk`.
-
-**Icon:** edit `resources/icon.svg` and `icon-foreground.svg`, then run `./resources/render-icons.sh` (needs `rsvg-convert` and ImageMagick).
 
 ## License
 

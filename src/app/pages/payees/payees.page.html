@@ -8,6 +8,12 @@
     </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
+    <ion-searchbar
+      placeholder="Search payees"
+      [debounce]="200"
+      [value]="query()"
+      (ionInput)="query.set($any($event).detail.value ?? '')"
+    />
     <ion-segment [value]="filter()" (ionChange)="filter.set($any($event).detail.value)">
       <ion-segment-button value="all"><ion-label>All</ion-label></ion-segment-button>
       <ion-segment-button value="frequent">
@@ -24,8 +30,13 @@
       <p>People and businesses you pay or get money from show up here once SMS are read.</p>
     </div>
   } @else {
-    <p class="hint">Tap a payee to set one category for all their transactions.</p>
     @if (payees().length) {
+      <p class="totals">
+        {{ payees().length }} {{ payees().length === 1 ? 'payee' : 'payees' }}
+        @if (paidTotal()) {
+          · paid {{ fmt(paidTotal()) }}
+        }
+      </p>
       <ion-list>
         @for (p of payees(); track p.key) {
           <ion-item [button]="true" [detail]="false" (click)="open(p)">
@@ -49,7 +60,11 @@
       </ion-list>
     } @else {
       <div class="empty">
-        <p>No one with {{ frequent }} or more transactions yet.</p>
+        @if (query()) {
+          <p>Nothing matches “{{ query() }}”.</p>
+        } @else {
+          <p>No one with {{ frequent }} or more transactions yet.</p>
+        }
       </div>
     }
 
@@ -71,5 +86,7 @@
         }
       </ion-list>
     }
+
+    <p class="hint">Tap a payee to set one category for all their transactions.</p>
   }
 </ion-content>

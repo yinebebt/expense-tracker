@@ -15,7 +15,8 @@ Angular 22 · Ionic 9 · Capacitor 8 · SQLite · a small Kotlin plugin for the 
 ## Install
 
 1. Download `expense-tracker-<version>.apk` from the [latest release](https://github.com/yinebebt/expense-tracker/releases/latest) on the phone and open it. Android asks to allow installs from your browser or file manager.
-2. Open the app and tap **Allow SMS access**. Android blocks SMS access for apps installed outside the Play Store: if SMS is greyed out, open the app's settings, tap ⋮ at the top right, choose **Allow restricted settings**, then allow SMS.
+2. The app isn't on the Play Store yet, so Play Protect may block the install. If the dialog offers **More details → Install anyway**, use that. Otherwise turn Play Protect off for this install: Play Store → profile picture → **Play Protect** → ⚙ → turn off **Scan apps with Play Protect**. Install the APK, then turn it back on.
+3. Open the app and tap **Allow SMS access**. Android blocks SMS access for apps installed outside the Play Store: if SMS is greyed out, open the app's settings, tap ⋮ at the top right, choose **Allow restricted settings**, then allow SMS.
 
 Updates install over the previous version and keep your data. Each release lists a `SHA256SUMS` file, and every APK is signed with the certificate whose SHA-256 is `deac7052 58b67b5e a17504c5 4a590e26 f4b0aa2b 2c077be3 ee9ada92 675965c1` (`apksigner verify --print-certs` shows it).
 

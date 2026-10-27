@@ -15,6 +15,8 @@ const tx = (
   merchant,
   reference: null,
   source: 'telebirr',
+  account: null,
+  counterAccount: null,
   smsId: null,
   dedupKey: `k${n}`,
   category: 'other',

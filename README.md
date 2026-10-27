@@ -26,7 +26,7 @@ Releases are built and published by a [GitHub Actions workflow](.github/workflow
 - **Sync:** a short first-run setup asks how far back to read (today, a week, a month, or 90 days by default) — change it later in Settings → Import from. After that the app reads new messages on launch, on resume, when one arrives while it's open, and on pull-to-refresh. Nothing runs while the app is closed. Moving the cutoff later also drops the SMS rows before it; moving it earlier needs a Settings → Re-read.
 - **Not counted:** messages the parser can't read go to review, and moves between your own accounts are shown separately. Ads are dropped.
 - **Payees:** a category set on a payee applies to all their transactions and to new ones.
-- **Balances:** each account's latest balance comes from its SMS ("current balance is …") or is typed in.
+- **Balances:** each account's latest balance comes from its SMS ("current balance is …") or is typed in. A bank with more than one account shows one balance per account.
 
 ## Development
 
@@ -56,7 +56,7 @@ Debug builds add `INTERNET` for live reload and are debuggable; don't share them
 
 ```text
 src/app/
-  parsing/     SMS → transaction: rules.ts (patterns, senders), sms-parser.ts, categorize.ts, transfers.ts
+  parsing/     SMS → transaction: rules.ts (patterns, senders), sms-parser.ts, categorize.ts, accounts.ts, transfers.ts
   summary/     totals, payee grouping, CSV export
   services/    database, import pipeline, SMS sync, native plugin wrapper
   components/  rows, charts, detail and add dialogs

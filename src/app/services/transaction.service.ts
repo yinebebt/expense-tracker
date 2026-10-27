@@ -9,8 +9,12 @@ import {
   Transaction,
 } from '../models/transaction.model';
 import { parseSms, toTransaction } from '../parsing/sms-parser';
-import { findSelfTransfers, SELF_TRANSFER_WINDOW_MS } from '../parsing/transfers';
-import { accountBalances } from '../summary/balances';
+import {
+  findOwnAccountTransfers,
+  findSelfTransfers,
+  SELF_TRANSFER_WINDOW_MS,
+} from '../parsing/transfers';
+import { accountBalances, accountNames } from '../summary/balances';
 import { groupByPayee, payeeKey, payeeRuleCategory } from '../summary/payees';
 import { summarize } from '../summary/summary';
 import { DatabaseService } from './database.service';
@@ -34,13 +38,20 @@ export class TransactionService {
   readonly payees = computed(() => groupByPayee(this.all()));
   readonly balances = computed(() => accountBalances(this.all(), this.manualBalances()));
   /** Cash first, then every account with transactions or a balance, busiest first. */
-  readonly accounts = computed(() => {
-    const counts = new Map<string, number>();
-    for (const t of this.all()) counts.set(t.source, (counts.get(t.source) ?? 0) + 1);
-    for (const s of this.manualBalances().keys()) counts.set(s, counts.get(s) ?? 0);
-    const seen = [...counts].sort((a, b) => b[1] - a[1]).map(([s]) => s);
-    return [CASH, ...seen.filter((s) => s !== CASH)];
-  });
+  readonly accounts = computed(() =>
+    this.busiestFirst(
+      (t) => t.source,
+      (s) => !this.names().isAccount(s),
+    ),
+  );
+  /** Like `accounts`, but a bank with several accounts is listed once per account. */
+  readonly balanceAccounts = computed(() =>
+    this.busiestFirst(
+      (t) => this.names().of(t.source, t.account),
+      (s) => this.names().of(s, null) !== null,
+    ),
+  );
+  private readonly names = computed(() => accountNames(this.all()));
 
   async load(): Promise<void> {
     const [txs, rules, balances] = await Promise.all([
@@ -85,7 +96,9 @@ export class TransactionService {
     if (rows.length) {
       const earliest = rows.reduce((min, r) => Math.min(min, r.occurredAt), Infinity);
       const pairs = findSelfTransfers(await this.db.since(earliest - SELF_TRANSFER_WINDOW_MS));
-      await this.db.setCategories(pairs, 'transfers', false);
+      // All rows: an account seen for the first time can make older rows transfers.
+      const toOwn = findOwnAccountTransfers(await this.db.all());
+      await this.db.setCategories([...pairs, ...toOwn], 'transfers', false);
     }
     await this.load();
     return { read: msgs.length, ignored: msgs.length - rows.length, inserted };
@@ -134,5 +147,22 @@ export class TransactionService {
   async deleteSmsBefore(occurredAt: number): Promise<void> {
     await this.db.deleteSmsBefore(occurredAt);
     await this.load();
+  }
+
+  /** Rows named by `nameOf` (skipped when null), and typed balances that pass `keepTyped`. */
+  private busiestFirst(
+    nameOf: (t: Transaction) => string | null,
+    keepTyped: (name: string) => boolean,
+  ): string[] {
+    const counts = new Map<string, number>();
+    for (const t of this.all()) {
+      const name = nameOf(t);
+      if (name !== null) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    for (const s of this.manualBalances().keys()) {
+      if (keepTyped(s)) counts.set(s, counts.get(s) ?? 0);
+    }
+    const seen = [...counts].sort((a, b) => b[1] - a[1]).map(([s]) => s);
+    return [CASH, ...seen.filter((s) => s !== CASH)];
   }
 }

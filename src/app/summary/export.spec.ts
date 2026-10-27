@@ -10,6 +10,8 @@ const sms = (p: Partial<Transaction>): Transaction => ({
   merchant: 'Kaldis Coffee',
   reference: 'FT26295ABC12',
   source: 'CBE',
+  account: '1*6789',
+  counterAccount: null,
   smsId: '7',
   dedupKey: 'CBE|debit|ref:FT26295ABC12',
   category: 'food',
@@ -24,7 +26,11 @@ const sms = (p: Partial<Transaction>): Transaction => ({
 describe('toCsv', () => {
   const lines = toCsv([
     sms({}),
-    sms({ merchant: 'Shop, "Bole"', occurredAt: new Date(2026, 9, 21, 18, 0).getTime() }),
+    sms({
+      merchant: 'Shop, "Bole"',
+      counterAccount: '1*4321',
+      occurredAt: new Date(2026, 9, 21, 18, 0).getTime(),
+    }),
     sms({ type: 'unknown', amountMinor: null, merchant: null, category: null, needsReview: true }),
     manualTransaction(
       {
@@ -43,25 +49,25 @@ describe('toCsv', () => {
 
   it('starts with a UTF-8 byte-order mark and a header', () => {
     expect(lines[0]).toBe(
-      '﻿date,time,direction,amount,currency,payee,category,account,reference,counted,origin',
+      '﻿date,time,direction,amount,currency,payee,category,account,account number,other account number,reference,counted,origin',
     );
   });
 
   it('writes rows oldest first with plain amounts', () => {
     expect(lines[1]).toBe(
-      '2026-10-21,18:00,out,1250.50,ETB,"Shop, ""Bole""",Food and drinks,CBE,FT26295ABC12,yes,sms',
+      '2026-10-21,18:00,out,1250.50,ETB,"Shop, ""Bole""",Food and drinks,CBE,1…6789,1…4321,FT26295ABC12,yes,sms',
     );
     expect(lines[2]).toBe(
-      '2026-10-22,09:05,out,1250.50,ETB,Kaldis Coffee,Food and drinks,CBE,FT26295ABC12,yes,sms',
+      '2026-10-22,09:05,out,1250.50,ETB,Kaldis Coffee,Food and drinks,CBE,1…6789,,FT26295ABC12,yes,sms',
     );
   });
 
   it('marks review rows and hand-entered rows', () => {
     expect(lines[3]).toBe(
-      '2026-10-22,09:05,unknown,,ETB,,,CBE,FT26295ABC12,no,"sms, needs review"',
+      '2026-10-22,09:05,unknown,,ETB,,,CBE,1…6789,,FT26295ABC12,no,"sms, needs review"',
     );
     expect(lines[4]).toBe(
-      "2026-10-23,08:00,in,500.00,ETB,'=SUM(A1),Income,Cash,R-1,yes,added by hand",
+      "2026-10-23,08:00,in,500.00,ETB,'=SUM(A1),Income,Cash,,,R-1,yes,added by hand",
     );
   });
 });

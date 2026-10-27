@@ -123,7 +123,7 @@ export class BalanceEditComponent implements OnInit {
   private readonly modal = inject(ModalController);
   private readonly txService = inject(TransactionService);
 
-  protected readonly accounts = this.txService.accounts;
+  protected readonly accounts = this.txService.balanceAccounts;
   protected readonly amountText = signal('');
   protected readonly source = signal(CASH);
   protected readonly date = signal(localInputValue(Date.now()));

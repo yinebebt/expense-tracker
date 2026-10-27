@@ -1,5 +1,6 @@
 import { formatMinor } from '../models/money';
 import { CATEGORY_LABELS, isManual, Transaction } from '../models/transaction.model';
+import { formatAccount } from '../parsing/accounts';
 import { isCounted } from './summary';
 
 const COLUMNS = [
@@ -11,6 +12,8 @@ const COLUMNS = [
   'payee',
   'category',
   'account',
+  'account number',
+  'other account number',
   'reference',
   'counted',
   'origin',
@@ -36,6 +39,8 @@ export function toCsv(txs: Transaction[]): string {
         t.merchant ?? '',
         t.category ? CATEGORY_LABELS[t.category] : '',
         t.source,
+        t.account ? formatAccount(t.account) : '',
+        t.counterAccount ? formatAccount(t.counterAccount) : '',
         t.reference ?? '',
         isCounted(t) ? 'yes' : 'no',
         isManual(t) ? 'added by hand' : t.needsReview ? 'sms, needs review' : 'sms',

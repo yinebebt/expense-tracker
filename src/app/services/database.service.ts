@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   needs_review INTEGER NOT NULL DEFAULT 0,
   raw_text TEXT,
   created_at INTEGER NOT NULL,
-  balance_minor INTEGER
+  balance_minor INTEGER,
+  account TEXT,
+  counter_account TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_occurred_at ON transactions (occurred_at);
 CREATE TABLE IF NOT EXISTS meta (
@@ -58,6 +60,8 @@ export const COLUMNS = [
   'raw_text',
   'created_at',
   'balance_minor',
+  'account',
+  'counter_account',
 ];
 
 /**
@@ -70,7 +74,9 @@ ON CONFLICT (dedup_key) DO UPDATE SET
   merchant = excluded.merchant,
   category = CASE WHEN category_manual THEN category ELSE excluded.category END,
   category_manual = category_manual OR excluded.category_manual,
-  balance_minor = excluded.balance_minor`;
+  balance_minor = excluded.balance_minor,
+  account = excluded.account,
+  counter_account = excluded.counter_account`;
 
 const SUPERSEDED_REVIEW_SQL = `DELETE FROM transactions WHERE type = 'unknown' AND sms_id = ? AND source = ?`;
 
@@ -92,6 +98,8 @@ export function toRow(t: Transaction): unknown[] {
     t.rawText,
     t.createdAt,
     t.balanceMinor,
+    t.account,
+    t.counterAccount,
   ];
 }
 
@@ -105,6 +113,8 @@ export function fromRow(r: Record<string, any>): Transaction {
     merchant: r['merchant'] ?? null,
     reference: r['reference'] ?? null,
     source: r['source'],
+    account: r['account'] ?? null,
+    counterAccount: r['counter_account'] ?? null,
     smsId: r['sms_id'] ?? null,
     dedupKey: r['dedup_key'],
     category: (r['category'] ?? null) as Category | null,
@@ -119,8 +129,14 @@ export function fromRow(r: Record<string, any>): Transaction {
 /** Brings an existing database up to SCHEMA. CREATE TABLE IF NOT EXISTS can't add columns. */
 async function migrate(db: SQLiteDBConnection): Promise<void> {
   const cols = (await db.query('PRAGMA table_info(transactions)')).values ?? [];
-  if (!cols.some((c) => c.name === 'balance_minor')) {
-    await db.execute('ALTER TABLE transactions ADD COLUMN balance_minor INTEGER;');
+  for (const [name, type] of [
+    ['balance_minor', 'INTEGER'],
+    ['account', 'TEXT'],
+    ['counter_account', 'TEXT'],
+  ]) {
+    if (!cols.some((c) => c.name === name)) {
+      await db.execute(`ALTER TABLE transactions ADD COLUMN ${name} ${type};`);
+    }
   }
 }
 

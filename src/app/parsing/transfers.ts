@@ -42,3 +42,24 @@ export function findSelfTransfers(
   }
   return ids;
 }
+
+/**
+ * Finds money sent to or received from another of the user's accounts at the same bank:
+ * CBE "to account 1****4321" when another CBE SMS said "your account 1****4321". Rows
+ * categorized by hand are left alone.
+ */
+export function findOwnAccountTransfers(txs: Transaction[]): string[] {
+  const key = (source: string, account: string) => `${source}|${account}`;
+  const own = new Set(txs.filter((t) => t.account).map((t) => key(t.source, t.account!)));
+  return txs
+    .filter(
+      (t) =>
+        t.type !== 'unknown' &&
+        !t.categoryManual &&
+        t.category !== 'transfers' &&
+        t.counterAccount &&
+        t.counterAccount !== t.account &&
+        own.has(key(t.source, t.counterAccount)),
+    )
+    .map((t) => t.id);
+}

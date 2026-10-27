@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { formatMinor } from '../models/money';
 import { CATEGORIES, Category, CATEGORY_LABELS, isManual } from '../models/transaction.model';
+import { formatAccount } from '../parsing/accounts';
 import { knownSenders } from '../parsing/sms-parser';
 import { SmsReaderService } from '../services/sms-reader.service';
 import { TransactionService } from '../services/transaction.service';
@@ -56,6 +57,14 @@ import { isCounted } from '../summary/summary';
           </dd>
           <dt>Date</dt>
           <dd>{{ t.occurredAt | date: 'EEE d MMM y, HH:mm' }}</dd>
+          @if (t.account) {
+            <dt>Your account</dt>
+            <dd class="ref">{{ t.source }} {{ fmtAccount(t.account) }}</dd>
+          }
+          @if (t.counterAccount) {
+            <dt>{{ t.type === 'credit' ? 'From account' : 'To account' }}</dt>
+            <dd class="ref">{{ fmtAccount(t.counterAccount) }}</dd>
+          }
           @if (t.reference) {
             <dt>Reference</dt>
             <dd class="ref">{{ t.reference }}</dd>
@@ -149,6 +158,7 @@ export class TxDetailComponent implements OnInit {
 
   protected readonly categories = CATEGORIES;
   protected readonly labels = CATEGORY_LABELS;
+  protected readonly fmtAccount = formatAccount;
 
   private readonly id = signal('');
   /** Live, so a category change shows straight away. */

@@ -3,6 +3,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { IonItem, IonLabel, IonNote } from '@ionic/angular';
 import { formatMinor } from '../models/money';
 import { CATEGORY_LABELS, Transaction, txTitle } from '../models/transaction.model';
+import { formatAccount } from '../parsing/accounts';
 
 @Component({
   selector: 'app-tx-item',
@@ -12,7 +13,7 @@ import { CATEGORY_LABELS, Transaction, txTitle } from '../models/transaction.mod
       <ion-label>
         <h3 [class.unnamed]="!tx().merchant">{{ title() }}</h3>
         <p>
-          {{ tx().source }} ·
+          {{ tx().source }}{{ account() }} ·
           @if (tx().needsReview) {
             <span class="review">Needs review</span> ·
           } @else {
@@ -50,6 +51,10 @@ export class TxItemComponent {
   readonly picked = output<Transaction>();
 
   protected readonly title = computed(() => txTitle(this.tx()));
+  protected readonly account = computed(() => {
+    const a = this.tx().account;
+    return a ? ` ${formatAccount(a)}` : '';
+  });
 
   protected readonly category = computed(() => {
     const c = this.tx().category;

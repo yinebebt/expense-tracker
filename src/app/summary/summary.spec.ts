@@ -11,6 +11,8 @@ const tx = (at: Date, amountMinor: number, p: Partial<Transaction> = {}): Transa
   merchant: null,
   reference: null,
   source: 'CBE',
+  account: null,
+  counterAccount: null,
   smsId: null,
   dedupKey: `k${n}`,
   category: 'other',

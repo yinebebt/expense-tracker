@@ -38,6 +38,10 @@ export interface Transaction {
   reference: string | null;
   /** Parser source, e.g. 'CBE', 'telebirr', or the account picked for a row added by hand. */
   source: string;
+  /** The user's account at `source`, with the SMS's mask shortened to one star: '1*6789'. */
+  account: string | null;
+  /** The other side's account, when the SMS names one. */
+  counterAccount: string | null;
   /** Null for rows added by hand. */
   smsId: string | null;
   /** `manual|<id>` for rows added by hand; see isManual(). */
@@ -96,6 +100,8 @@ export function manualTransaction(e: ManualEntry, id: string, now: number): Tran
     id,
     ...e,
     currency: 'ETB',
+    account: null,
+    counterAccount: null,
     smsId: null,
     dedupKey: MANUAL_KEY + id,
     categoryManual: true,

@@ -1,5 +1,5 @@
 import { Transaction } from '../models/transaction.model';
-import { findSelfTransfers } from './transfers';
+import { findOwnAccountTransfers, findSelfTransfers } from './transfers';
 
 const MIN = 60_000;
 let n = 0;
@@ -12,6 +12,8 @@ const tx = (p: Partial<Transaction>): Transaction => ({
   merchant: null,
   reference: null,
   source: 'CBE',
+  account: null,
+  counterAccount: null,
   smsId: null,
   dedupKey: `k${n}`,
   category: 'other',
@@ -72,5 +74,33 @@ describe('findSelfTransfers', () => {
     const near = tx({ type: 'credit', source: 'telebirr', occurredAt: 30_000 });
     const far = tx({ type: 'credit', source: 'BOA', occurredAt: 3 * MIN });
     expect(findSelfTransfers([d1, far, near])).toEqual([d1.id, near.id]);
+  });
+});
+
+describe('findOwnAccountTransfers', () => {
+  it('marks money sent to or received from another account of the user at the same bank', () => {
+    const recv = tx({
+      type: 'credit',
+      account: '1*4321',
+      counterAccount: '1*6789',
+      category: 'income',
+    });
+    const sent = tx({ type: 'debit', account: '1*6789', counterAccount: '1*4321' });
+    expect(findOwnAccountTransfers([recv, sent]).sort()).toEqual([recv.id, sent.id].sort());
+  });
+
+  it('needs the exact same number at the same bank', () => {
+    const mine = tx({ account: '1*6789' });
+    const longer = tx({ account: '1*1111', counterAccount: '1*56789' });
+    const unmasked = tx({ account: '1*1111', counterAccount: '1000123456789' });
+    const otherBank = tx({ source: 'BOA', account: '12*555', counterAccount: '1*6789' });
+    expect(findOwnAccountTransfers([mine, longer, unmasked, otherBank])).toEqual([]);
+  });
+
+  it("leaves rows set by hand alone, and a number equal to the sender's own", () => {
+    const mine = tx({ account: '1*6789' });
+    const manual = tx({ counterAccount: '1*6789', categoryManual: true });
+    const self = tx({ account: '1*6789', counterAccount: '1*6789' });
+    expect(findOwnAccountTransfers([mine, manual, self])).toEqual([]);
   });
 });

@@ -135,14 +135,10 @@
                 {{ money(balanceTotal()) }}
               </div>
               <ion-list class="rows">
-                @for (b of balances(); track b.source) {
-                  <ion-item
-                    [button]="true"
-                    [detail]="false"
-                    (click)="txDetail.editBalance(b.source)"
-                  >
+                @for (b of balances(); track b.name) {
+                  <ion-item [button]="true" [detail]="false" (click)="txDetail.editBalance(b.name)">
                     <ion-label>
-                      <h3>{{ b.source }}</h3>
+                      <h3>{{ b.name }}</h3>
                       <p>{{ b.manual ? 'Typed in' : 'From SMS' }} · {{ b.at | date: 'd MMM' }}</p>
                     </ion-label>
                     <ion-note slot="end" class="balance">

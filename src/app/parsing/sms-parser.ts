@@ -1,5 +1,6 @@
 import { parseAmountMinor } from '../models/money';
 import { Category, RawSms, Transaction, TxType } from '../models/transaction.model';
+import { readAccounts } from './accounts';
 import { categorize } from './categorize';
 import { dedupKey } from './dedup';
 import {
@@ -22,6 +23,8 @@ export type IgnoreReason =
 
 export interface ParsedTx {
   source: string;
+  account: string | null;
+  counterAccount: string | null;
   type: TxType;
   amountMinor: number | null;
   currency: string;
@@ -83,6 +86,7 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
       tx: {
         ...base,
         type: 'unknown',
+        ...readAccounts(body, 'unknown'),
         amountMinor: firstAmount(body),
         merchant: null,
         category: null,
@@ -107,6 +111,7 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
         tx: {
           ...base,
           type: p.type,
+          ...readAccounts(body, p.type),
           amountMinor,
           merchant,
           category: p.category ?? categorize(p.type, merchant),
@@ -130,6 +135,7 @@ export function parseSms(sms: RawSms, rules: SourceRule[] = SOURCES): ParseResul
     tx: {
       ...base,
       type: 'unknown',
+      ...readAccounts(body, 'unknown'),
       amountMinor: firstAmount(body),
       merchant: null,
       category: null,
@@ -148,6 +154,8 @@ export function toTransaction(sms: RawSms, tx: ParsedTx, id: string, now: number
     merchant: tx.merchant,
     reference: tx.reference,
     source: tx.source,
+    account: tx.account,
+    counterAccount: tx.counterAccount,
     smsId: sms.id ?? null,
     dedupKey: dedupKey({ ...tx, occurredAt: sms.date }),
     category: tx.category,

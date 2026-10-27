@@ -27,6 +27,7 @@ export const FIXTURES: Fixture[] = [
       'Dear Abebe your Account 1*****6789 has been debited with ETB 1,250.00 on 14/10/2026 at 09:12:44 to Kaldis Coffee Bole. Ref No FT26287ABC12. Your Current Balance is ETB 8,430.55. Thank you for Banking with CBE!',
     ),
     expect: {
+      account: '1*6789',
       source: 'CBE',
       type: 'debit',
       amountMinor: 125000,
@@ -59,6 +60,8 @@ export const FIXTURES: Fixture[] = [
       'Dear Abebe You have transfered ETB 2,000.00 to Abebe Kebede (telebirr 2519****5678) on 12/10/2026 at 18:30:00 from your account 1*****6789. Ref No FT26285TLB01. Thank you for Banking with CBE!',
     ),
     expect: {
+      account: '1*6789',
+      counterAccount: null,
       source: 'CBE',
       type: 'debit',
       amountMinor: 200000,
@@ -92,6 +95,7 @@ export const FIXTURES: Fixture[] = [
       'Dear Customer, your account 12****345 has been debited with ETB 780.00 for Merchant Payment to Ethio Fuel Station on 17-Oct-2026 11:20. Ref: 2629011A7Q. Available balance: ETB 4,210.00. -Bank of Abyssinia',
     ),
     expect: {
+      account: '12*345',
       source: 'BOA',
       type: 'debit',
       amountMinor: 78000,
@@ -252,6 +256,7 @@ export const FIXTURES: Fixture[] = [
       'ውድ ደንበኛችን  ከሂሳብ ቁጥርዎ 1*23 ብር 1,250.00 ወጪ ተደርጓል።ቀሪ ሂሳብዎ: ETB 80.00። ደረሰኝ: https://cs.bankofabyssinia.com/slip/?trx=FT26293ABCD12345\nእባክዎ አስተያየትዎን ይስጡን: https://cs.bankofabyssinia.com/cs/?trx=DFT26293ABCD1 ለተጨማሪ መረጃ በነፃ ስልክ ቁጥር 8397 (24/7) ይደውሉ፡፡አቢሲንያ ባንክ',
     ),
     expect: {
+      account: '1*23',
       source: 'BOA',
       type: 'debit',
       amountMinor: 125000,
@@ -394,6 +399,8 @@ export const FIXTURES: Fixture[] = [
       'Dear Abebe Kebede You have successfully transferred ETB1500.00 from account 1********6789 to account 1********4321 (A.a .city.adm.sample Agency). Service charge of ETB 2.00 and VAT(15%) of ETB0.30 and Disaster Recovery(5%) of 0.10 with total of ETB1502.40 .Your current balance is ETB300.00. Thanks for Banking with CBE.',
     ),
     expect: {
+      account: '1*6789',
+      counterAccount: '1*4321',
       source: 'CBE',
       type: 'debit',
       amountMinor: 150000,
@@ -408,11 +415,45 @@ export const FIXTURES: Fixture[] = [
       'Dear Abebe Kebede You have received ETB 800.00 from account 1********4321 (Almaz Bekele Tesfaye) to your account 1********6789. Your current balance is ETB1,100.00. Thanks for Banking with CBE.',
     ),
     expect: {
+      account: '1*6789',
+      counterAccount: '1*4321',
       source: 'CBE',
       type: 'credit',
       amountMinor: 80000,
       merchant: 'Almaz Bekele Tesfaye',
       category: 'income',
+    },
+  },
+  {
+    name: 'CBE transfer to another account of your own',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 22, 9, 0, 0),
+      'Dear Abebe Kebede You have successfully transferred ETB1000.00 from account 1********6789 to account 1********2468 (Abebe Kebede). Your current balance is ETB2,300.00. Thanks for Banking with CBE.',
+    ),
+    expect: {
+      source: 'CBE',
+      type: 'debit',
+      amountMinor: 100000,
+      account: '1*6789',
+      counterAccount: '1*2468',
+      balanceMinor: 230000,
+    },
+  },
+  {
+    name: 'CBE received on your other account',
+    sms: sms(
+      'CBE',
+      new Date(2026, 9, 22, 9, 0, 5),
+      'Dear Abebe Kebede You have received ETB 1,000.00 from account 1********6789 (Abebe Kebede) to your account 1********2468. Your current balance is ETB5,000.00. Thanks for Banking with CBE.',
+    ),
+    expect: {
+      source: 'CBE',
+      type: 'credit',
+      amountMinor: 100000,
+      account: '1*2468',
+      counterAccount: '1*6789',
+      balanceMinor: 500000,
     },
   },
   {
@@ -423,6 +464,7 @@ export const FIXTURES: Fixture[] = [
       'You have received  ETB 2,000.00 by transaction number CJP6SF9U8X on 2026-10-20 13:00:00 from Bank of Abyssinia to your telebirr Account 251911223344 - Abebe Kebede. Your current balance is ETB 2,100.00.',
     ),
     expect: {
+      account: null,
       source: 'telebirr',
       type: 'credit',
       amountMinor: 200000,
@@ -542,6 +584,7 @@ export const FIXTURES: Fixture[] = [
       'Dear customer, your account 0134****01 has been debited with 2,300.00 ETB to Getfam Hotel on 20/10/2026. Ref: AWB26293X1. Balance: 9,700.00 ETB',
     ),
     expect: {
+      account: '0134*01',
       source: 'Awash',
       type: 'debit',
       amountMinor: 230000,
@@ -557,6 +600,7 @@ export const FIXTURES: Fixture[] = [
       'ETB 8,000.00 has been credited to your account 50***12 from Liya Bekele on 20-10-2026. Reference No. DB2629311Q. Thank you for banking with Dashen.',
     ),
     expect: {
+      account: '50*12',
       source: 'Dashen',
       type: 'credit',
       amountMinor: 800000,
@@ -573,6 +617,7 @@ export const FIXTURES: Fixture[] = [
       'Dear Member, ETB 1,000.00 has been withdrawn from your account 10***99 at ATM Piassa on 21/10/2026. Ref: CO2629477A. Available Balance ETB 4,000.00',
     ),
     expect: {
+      account: '10*99',
       source: 'Coopbank',
       type: 'debit',
       amountMinor: 100000,

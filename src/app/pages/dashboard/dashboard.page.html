@@ -181,7 +181,7 @@
             </div>
             @if (s().month.moved.count) {
               <ion-list class="rows" lines="none">
-                <ion-item routerLink="/tabs/payees" [detail]="true">
+                <ion-item [button]="true" [detail]="true" (click)="showCategory('transfers')">
                   <ion-icon slot="start" name="swap-horizontal-outline" color="medium" />
                   <ion-label class="ion-text-wrap">
                     Moved between your accounts

@@ -20,6 +20,10 @@ describe('categorize', () => {
     expect(categorize('debit', 'Ethio Telecom')).toBe('bills');
   });
 
+  it('counts cashback from a wallet as income', () => {
+    expect(categorize('credit', 'M-PESA cashback')).toBe('income');
+  });
+
   it('keeps income separate from spending categories', () => {
     expect(categorize('credit', 'Kaldis Coffee')).toBe('income');
     expect(categorize('debit', 'Kebede Alemu')).toBe('other');

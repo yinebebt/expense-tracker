@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonButtons,
-  IonChip,
   IonContent,
   IonFab,
   IonFabButton,
@@ -20,6 +19,8 @@ import {
   IonRefresherContent,
   IonRouterLink,
   IonSearchbar,
+  IonSelect,
+  IonSelectOption,
   IonTitle,
   IonToolbar,
   RefresherCustomEvent,
@@ -34,12 +35,14 @@ import { SmsSyncService } from '../../services/sms-sync.service';
 import { TransactionService } from '../../services/transaction.service';
 import { DateRange, isCounted, monthRange, weekRange } from '../../summary/summary';
 
-type Period = 'week' | 'month' | 'custom';
+type Period = 'all' | 'week' | 'month' | 'last-month' | 'custom';
 
 const PERIODS: { value: Period; label: string }[] = [
+  { value: 'all', label: 'All time' },
   { value: 'week', label: 'This week' },
   { value: 'month', label: 'This month' },
-  { value: 'custom', label: 'Pick dates' },
+  { value: 'last-month', label: 'Last month' },
+  { value: 'custom', label: 'Pick dates…' },
 ];
 
 const DAY = 86_400_000;
@@ -50,7 +53,11 @@ function dayLabel(day: number): string {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   if (day === today) return 'Today';
   if (day === today - DAY) return 'Yesterday';
-  return new Date(day).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  return new Date(day).toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
 }
 
 /** "2026-10-23" from a date input, as local midnight. */
@@ -58,6 +65,12 @@ function parseDay(value: string): Date | null {
   const [y, m, d] = value.split('-').map(Number);
   return y && m && d ? new Date(y, m - 1, d) : null;
 }
+
+/** A date as a date-input value, "2026-10-23". */
+const inputDay = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const shortDate = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 interface DayGroup {
   day: number;
@@ -76,9 +89,10 @@ interface DayGroup {
     IonTitle,
     IonButtons,
     IonButton,
-    IonChip,
     IonIcon,
     IonSearchbar,
+    IonSelect,
+    IonSelectOption,
     IonContent,
     IonFab,
     IonFabButton,
@@ -103,24 +117,25 @@ interface DayGroup {
         </ion-buttons>
       </ion-toolbar>
       <ion-toolbar>
-        <ion-searchbar
-          placeholder="Search merchant, bank, category, amount"
-          [debounce]="200"
-          [value]="query()"
-          (ionInput)="query.set($any($event).detail.value ?? '')"
-        />
-        <div class="chips">
-          @for (p of periods; track p.value) {
-            <ion-chip [outline]="period() !== p.value" (click)="togglePeriod(p.value)">
-              {{ p.label }}
-            </ion-chip>
-          }
-          <ion-chip [outline]="flow() !== 'debit'" (click)="toggleFlow('debit')"
-            >Money out</ion-chip
+        <div class="search-row">
+          <ion-searchbar
+            placeholder="Search"
+            [debounce]="200"
+            [value]="query()"
+            (ionInput)="query.set($any($event).detail.value ?? '')"
+          />
+          <ion-select
+            [class.on]="period() !== 'all'"
+            aria-label="Period"
+            interface="popover"
+            [value]="period()"
+            [selectedText]="period() === 'custom' ? customLabel() : undefined"
+            (ionChange)="setPeriod($any($event).detail.value)"
           >
-          <ion-chip [outline]="flow() !== 'credit'" (click)="toggleFlow('credit')"
-            >Money in</ion-chip
-          >
+            @for (p of periods; track p.value) {
+              <ion-select-option [value]="p.value">{{ p.label }}</ion-select-option>
+            }
+          </ion-select>
         </div>
         @if (period() === 'custom') {
           <div class="dates">
@@ -149,16 +164,41 @@ interface DayGroup {
       <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
         <ion-refresher-content />
       </ion-refresher>
+      @if (matched().length) {
+        <div class="totals" role="group" aria-label="Money in or out">
+          <button
+            type="button"
+            [class.on]="flow() === null"
+            [attr.aria-pressed]="flow() === null"
+            (click)="flow.set(null)"
+          >
+            {{ totals().count }} {{ totals().count === 1 ? 'transaction' : 'transactions' }}
+          </button>
+          @if (totals().spent || flow() === 'debit') {
+            ·
+            <button
+              type="button"
+              [class.on]="flow() === 'debit'"
+              [attr.aria-pressed]="flow() === 'debit'"
+              (click)="toggleFlow('debit')"
+            >
+              out {{ fmt(totals().spent) }}
+            </button>
+          }
+          @if (totals().received || flow() === 'credit') {
+            ·
+            <button
+              type="button"
+              [class.on]="flow() === 'credit'"
+              [attr.aria-pressed]="flow() === 'credit'"
+              (click)="toggleFlow('credit')"
+            >
+              in {{ fmt(totals().received) }}
+            </button>
+          }
+        </div>
+      }
       @if (groups().length) {
-        <p class="totals">
-          {{ totals().count }} {{ totals().count === 1 ? 'transaction' : 'transactions' }}
-          @if (totals().spent) {
-            · out {{ fmt(totals().spent) }}
-          }
-          @if (totals().received) {
-            · in {{ fmt(totals().received) }}
-          }
-        </p>
         <ion-list>
           @for (g of groups(); track g.day) {
             <ion-item-group>
@@ -196,17 +236,6 @@ interface DayGroup {
     </ion-content>
   `,
   styles: `
-    .chips {
-      display: flex;
-      gap: 4px;
-      padding: 0 8px 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .chips ion-chip {
-      flex-shrink: 0;
-      margin: 0;
-    }
     .dates {
       display: flex;
       gap: 12px;
@@ -230,11 +259,24 @@ interface DayGroup {
       font-size: 0.95rem;
     }
     .totals {
-      margin: 0;
       padding: 10px 16px 4px;
       font-size: 0.85rem;
       color: var(--viz-muted);
       font-variant-numeric: tabular-nums;
+    }
+    /* Each part of the totals line filters to it; the chosen one reads as selected. */
+    .totals button {
+      padding: 2px 0;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: none;
+      color: inherit;
+      font: inherit;
+    }
+    .totals button.on {
+      border-bottom-color: var(--ion-color-primary);
+      color: var(--ion-text-color);
+      font-weight: 600;
     }
     .day-total {
       padding-inline-end: 16px;
@@ -250,7 +292,7 @@ export class TransactionsPage {
 
   protected readonly query = signal('');
   protected readonly periods = PERIODS;
-  protected readonly period = signal<Period | null>(null);
+  protected readonly period = signal<Period>('all');
   /** "Pick dates" bounds as date-input values; either can be empty. */
   protected readonly from = signal('');
   protected readonly to = signal('');
@@ -262,6 +304,16 @@ export class TransactionsPage {
     () => !!this.query().trim() || this.range() !== null || this.flow() !== null,
   );
 
+  /** What the period dropdown reads once dates are picked: "3 Oct – 20 Oct". */
+  protected readonly customLabel = computed(() => {
+    const from = parseDay(this.from());
+    const to = parseDay(this.to());
+    if (from && to) return `${shortDate(from)} – ${shortDate(to)}`;
+    if (from) return `From ${shortDate(from)}`;
+    if (to) return `Until ${shortDate(to)}`;
+    return undefined;
+  });
+
   private readonly range = computed<DateRange | null>(() => {
     const now = new Date();
     switch (this.period()) {
@@ -269,6 +321,8 @@ export class TransactionsPage {
         return weekRange(now);
       case 'month':
         return monthRange(now);
+      case 'last-month':
+        return monthRange(new Date(now.getFullYear(), now.getMonth() - 1, 1));
       case 'custom': {
         const from = parseDay(this.from());
         const to = parseDay(this.to());
@@ -283,14 +337,23 @@ export class TransactionsPage {
     }
   });
 
-  protected readonly groups = computed<DayGroup[]>(() => {
+  /** Search and period applied, before money in/out, so the totals line can offer both. */
+  protected readonly matched = computed(() => {
     const q = this.query().trim().toLowerCase();
     const r = this.range();
+    return this.txService
+      .transactions()
+      .filter(
+        (t) =>
+          (!q || this.searchText(t).includes(q)) &&
+          (!r || (t.occurredAt >= r.start.getTime() && t.occurredAt < r.end.getTime())),
+      );
+  });
+
+  protected readonly groups = computed<DayGroup[]>(() => {
     const flow = this.flow();
     const groups: DayGroup[] = [];
-    for (const t of this.txService.transactions()) {
-      if (q && !this.searchText(t).includes(q)) continue;
-      if (r && (t.occurredAt < r.start.getTime() || t.occurredAt >= r.end.getTime())) continue;
+    for (const t of this.matched()) {
       if (flow && t.type !== flow) continue;
       const d = new Date(t.occurredAt);
       const day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -304,17 +367,16 @@ export class TransactionsPage {
     return groups;
   });
 
-  /** What's listed, counted the way the dashboard counts. */
+  /** What search and period match, counted the way the dashboard counts. */
   protected readonly totals = computed(() => {
-    let count = 0;
     let spent = 0;
     let received = 0;
-    for (const g of this.groups()) {
-      count += g.items.length;
-      spent += g.spentMinor;
-      for (const t of g.items) if (t.type === 'credit' && isCounted(t)) received += t.amountMinor!;
+    for (const t of this.matched()) {
+      if (!isCounted(t)) continue;
+      if (t.type === 'debit') spent += t.amountMinor!;
+      else if (t.type === 'credit') received += t.amountMinor!;
     }
-    return { count, spent, received };
+    return { count: this.matched().length, spent, received };
   });
 
   constructor() {
@@ -327,13 +389,19 @@ export class TransactionsPage {
         const q = params.get('q');
         if (q === null) return;
         this.query.set(q);
-        this.period.set(params.get('period') === 'month' ? 'month' : null);
+        this.period.set(params.get('period') === 'month' ? 'month' : 'all');
         this.flow.set(null);
       });
   }
 
-  protected togglePeriod(p: Period): void {
-    this.period.set(this.period() === p ? null : p);
+  /** Picking dates starts both bounds on today, so the list isn't empty before a date is set. */
+  protected setPeriod(p: Period): void {
+    if (p === 'custom') {
+      const today = inputDay(new Date());
+      if (!this.from()) this.from.set(today);
+      if (!this.to()) this.to.set(today);
+    }
+    this.period.set(p);
   }
 
   protected toggleFlow(f: 'debit' | 'credit'): void {

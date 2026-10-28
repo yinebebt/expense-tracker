@@ -38,11 +38,43 @@ describe('findSelfTransfers', () => {
       [],
     );
     expect(
-      findSelfTransfers([d, tx({ type: 'credit', source: 'BOA', amountMinor: 199999 })]),
+      findSelfTransfers([d, tx({ type: 'credit', source: 'BOA', amountMinor: 200001 })]),
     ).toEqual([]);
     expect(
       findSelfTransfers([d, tx({ type: 'credit', source: 'BOA', occurredAt: 11 * MIN })]),
     ).toEqual([]);
+  });
+
+  it('pairs a debit that includes the sending bank fee', () => {
+    const d = tx({ type: 'debit', source: 'BOA', amountMinor: 601200 });
+    const c = tx({
+      type: 'credit',
+      source: 'telebirr',
+      amountMinor: 600000,
+      merchant: 'Bank of Abyssinia',
+      category: 'transfers',
+    });
+    expect(findSelfTransfers([d, c])).toEqual([d.id]);
+    const tooBig = tx({ type: 'debit', source: 'BOA', amountMinor: 700000 });
+    expect(findSelfTransfers([tooBig, c])).toEqual([]);
+  });
+
+  it('prefers an exact amount over a fee match', () => {
+    const withFee = tx({ type: 'debit', source: 'BOA', amountMinor: 200400, occurredAt: 0 });
+    const exact = tx({ type: 'debit', source: 'CBE', occurredAt: 3 * MIN });
+    const c = tx({ type: 'credit', source: 'telebirr', occurredAt: 0, category: 'income' });
+    expect(findSelfTransfers([withFee, exact, c])).toEqual([exact.id, c.id]);
+  });
+
+  it('does not pair a payment to a person with money back from a person', () => {
+    const paid = tx({ type: 'debit', source: 'telebirr', merchant: 'Abebe Kebede' });
+    const back = tx({
+      type: 'credit',
+      source: 'CBE',
+      merchant: 'Abebe Kebede Alemu',
+      category: 'income',
+    });
+    expect(findSelfTransfers([paid, back])).toEqual([]);
   });
 
   it('leaves manual and unknown rows alone', () => {

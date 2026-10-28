@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, input, model, signal } from '@angular/core';
+import { Component, computed, input, model } from '@angular/core';
 import { formatMinor } from '../models/money';
 import { DayTotal } from '../summary/summary';
 
@@ -27,87 +27,52 @@ function columnPath(x: number, top: number): string {
   return `M${x},${BASE} V${top + r} Q${x},${top} ${x + r},${top} H${x + BAR - r} Q${x + BAR},${top} ${x + BAR},${top + r} V${BASE} Z`;
 }
 
-/** Spending per day for one week. Tap a day to select it; "List" shows all seven. Content goes in the header. */
+/** Spending per day for one week. Tap a day to select it. Content goes in the caption above. */
 @Component({
   selector: 'app-week-chart',
   imports: [DatePipe],
   template: `
-    <div class="head">
-      <span class="caption"><ng-content /></span>
-      <button type="button" class="toggle" (click)="asList.set(!asList())">
-        {{ asList() ? 'Chart' : 'List' }}
-      </button>
-    </div>
-
-    @if (asList()) {
-      <table class="days">
-        @for (d of days(); track $index) {
-          <tr
-            [class.today]="$index === todayIndex()"
-            [class.on]="$index === selected()"
-            (click)="select($index)"
-          >
-            <td>{{ d.day | date: 'EEEE d MMM' }}</td>
-            <td class="num">{{ fmt(d.spentMinor) }}</td>
-          </tr>
-        }
-      </table>
-    } @else {
-      <svg
-        [attr.viewBox]="'0 0 ' + W + ' ' + H"
-        role="group"
-        aria-label="Spending per day this week"
-        [class.picking]="selected() !== null"
-      >
-        <line class="baseline" x1="0" [attr.x2]="W" [attr.y1]="BASE" [attr.y2]="BASE" />
-        @for (b of bars(); track b.i) {
-          <g
-            class="band"
-            tabindex="0"
-            role="button"
-            [attr.aria-label]="(b.day | date: 'EEEE') + ', ' + fmt(b.minor)"
-            [attr.aria-pressed]="b.i === selected()"
-            (click)="select(b.i)"
-            (keydown.enter)="select(b.i)"
-          >
-            <rect class="hit" [attr.x]="b.bandX" y="0" [attr.width]="BAND" [attr.height]="H" />
-            @if (b.top !== null) {
-              <path [attr.d]="b.path" [class.on]="b.i === selected()" />
-            }
-            @if (b.label) {
-              <text class="value" [attr.x]="b.cx" [attr.y]="(b.top ?? BASE) - 6">
-                {{ b.label }}
-              </text>
-            }
-            <text class="day" [class.today]="b.i === todayIndex()" [attr.x]="b.cx" [attr.y]="H - 7">
-              {{ b.day | date: 'EEE' }}
+    <div class="caption"><ng-content /></div>
+    <svg
+      [attr.viewBox]="'0 0 ' + W + ' ' + H"
+      role="group"
+      aria-label="Spending per day"
+      [class.picking]="selected() !== null"
+    >
+      <line class="baseline" x1="0" [attr.x2]="W" [attr.y1]="BASE" [attr.y2]="BASE" />
+      @for (b of bars(); track b.i) {
+        <g
+          class="band"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="(b.day | date: 'EEEE') + ', ' + fmt(b.minor)"
+          [attr.aria-pressed]="b.i === selected()"
+          (click)="select(b.i)"
+          (keydown.enter)="select(b.i)"
+        >
+          <rect class="hit" [attr.x]="b.bandX" y="0" [attr.width]="BAND" [attr.height]="H" />
+          @if (b.top !== null) {
+            <path [attr.d]="b.path" [class.on]="b.i === selected()" />
+          }
+          @if (b.label) {
+            <text class="value" [attr.x]="b.cx" [attr.y]="(b.top ?? BASE) - 6">
+              {{ b.label }}
             </text>
-          </g>
-        }
-      </svg>
-    }
+          }
+          <text class="day" [class.today]="b.i === todayIndex()" [attr.x]="b.cx" [attr.y]="H - 7">
+            {{ b.day | date: 'EEE' }}
+          </text>
+        </g>
+      }
+    </svg>
   `,
   styles: `
     :host {
       display: block;
     }
-    .head {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
     .caption {
+      margin-bottom: 4px;
       color: var(--viz-muted);
-      font-size: 0.85rem;
-    }
-    .toggle {
-      background: none;
-      border: 0;
-      padding: 4px 0;
-      color: var(--ion-color-primary);
-      font: inherit;
       font-size: 0.85rem;
     }
     svg {
@@ -151,28 +116,6 @@ function columnPath(x: number, top: number): string {
       fill: var(--ion-text-color);
       font-weight: 600;
     }
-    table.days {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    table.days td {
-      padding: 6px 0;
-      border-bottom: 1px solid var(--viz-baseline);
-    }
-    table.days tr {
-      cursor: pointer;
-    }
-    table.days tr.today td {
-      font-weight: 600;
-    }
-    table.days tr.on td {
-      color: var(--ion-color-primary);
-    }
-    .num {
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-    }
   `,
 })
 export class WeekChartComponent {
@@ -184,7 +127,6 @@ export class WeekChartComponent {
   protected readonly BASE = BASE;
   protected readonly BAND = BAND;
   protected readonly fmt = formatMinor;
-  protected readonly asList = signal(false);
   /** Index into `days`, or null when no day is picked. */
   readonly selected = model<number | null>(null);
 
@@ -207,7 +149,7 @@ export class WeekChartComponent {
       const x = bandX + (BAND - BAR) / 2;
       const h = max ? Math.max(3, (d.spentMinor / max) * (BASE - TOP)) : 0;
       const top = d.spentMinor > 0 ? BASE - h : null;
-      // Label only the tallest day and the selected one; the readout and List carry the rest.
+      // Label only the tallest day and the selected one; the readout above carries the rest.
       const labelled = d.spentMinor > 0 && (i === maxIndex || i === this.selected());
       return {
         i,

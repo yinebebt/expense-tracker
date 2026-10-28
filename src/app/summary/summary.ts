@@ -16,9 +16,10 @@ export interface DayTotal {
   spentMinor: number;
 }
 
+export type WeekSummary = DateRange & { spent: number; days: DayTotal[] };
+
 export interface DashboardSummary {
-  today: DateRange & { spent: number };
-  week: DateRange & { spent: number; received: number; days: DayTotal[] };
+  today: DateRange;
   month: DateRange & {
     spent: number;
     received: number;
@@ -26,8 +27,6 @@ export interface DashboardSummary {
     /** Money moved between the user's own accounts; never counted as spent or received. */
     moved: { amountMinor: number; count: number };
   };
-  /** Highest-spending category this month. */
-  topCategory: CategoryTotal | null;
 }
 
 export function dayRange(now: Date): DateRange {
@@ -94,6 +93,12 @@ export function dailySpending(txs: Transaction[], r: DateRange): DayTotal[] {
   return days;
 }
 
+/** The Monday-to-Sunday week that holds `day`, with its spending per day. */
+export function weekSummary(txs: Transaction[], day: Date): WeekSummary {
+  const r = weekRange(day);
+  return { ...r, spent: total(txs, 'debit', r), days: dailySpending(txs, r) };
+}
+
 /**
  * Money moved between own accounts. Both sides of a move are usually stored (the debit
  * at one bank, the credit at another), so the larger side stands for the amount moved
@@ -118,25 +123,15 @@ export function movedBetweenAccounts(
 }
 
 export function summarize(txs: Transaction[], now = new Date()): DashboardSummary {
-  const today = dayRange(now);
-  const week = weekRange(now);
   const month = monthRange(now);
-  const byCategory = spendingByCategory(txs, month);
   return {
-    today: { ...today, spent: total(txs, 'debit', today) },
-    week: {
-      ...week,
-      spent: total(txs, 'debit', week),
-      received: total(txs, 'credit', week),
-      days: dailySpending(txs, week),
-    },
+    today: dayRange(now),
     month: {
       ...month,
       spent: total(txs, 'debit', month),
       received: total(txs, 'credit', month),
-      byCategory,
+      byCategory: spendingByCategory(txs, month),
       moved: movedBetweenAccounts(txs, month),
     },
-    topCategory: byCategory[0] ?? null,
   };
 }

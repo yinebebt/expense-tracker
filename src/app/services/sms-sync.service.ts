@@ -1,5 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { App } from '@capacitor/app';
+import { DAY } from '../models/dates';
 import { knownSenders } from '../parsing/sms-parser';
 import { DatabaseService } from './database.service';
 import { SmsAccess, SmsReaderService } from './sms-reader.service';
@@ -7,7 +8,6 @@ import { ImportResult, TransactionService } from './transaction.service';
 
 /** How far back the first import (and a full re-import) reads, when no custom start is set. */
 export const IMPORT_WINDOW_DAYS = 90;
-const DAY = 86_400_000;
 const LAST_SMS_KEY = 'last_sms_date';
 const IMPORT_START_KEY = 'import_start_date';
 
@@ -21,7 +21,11 @@ export interface SyncResult extends ImportResult {
  * `importStart` is the user's chosen cutoff (e.g. "today"); it only matters
  * before the first message has ever been seen, falling back to the window.
  */
-export function syncStart(lastSmsDate: number | null, now: number, importStart: number | null = null): number {
+export function syncStart(
+  lastSmsDate: number | null,
+  now: number,
+  importStart: number | null = null,
+): number {
   return lastSmsDate ?? importStart ?? now - IMPORT_WINDOW_DAYS * DAY;
 }
 

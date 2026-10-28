@@ -1,3 +1,5 @@
+export const DAY = 86_400_000;
+
 /** "2026-10-23T08:05" in local time, the value a datetime-local input takes. */
 export function localInputValue(ms: number): string {
   const d = new Date(ms);

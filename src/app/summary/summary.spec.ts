@@ -1,5 +1,5 @@
 import { Transaction } from '../models/transaction.model';
-import { dayRange, monthRange, spentIn, summarize, weekRange } from './summary';
+import { dayRange, monthRange, spentIn, summarize, weekRange, weekSummary } from './summary';
 
 let n = 0;
 const tx = (at: Date, amountMinor: number, p: Partial<Transaction> = {}): Transaction => ({
@@ -72,24 +72,24 @@ describe('summarize', () => {
     tx(new Date(2026, 9, 22, 9, 0), 4500, { type: 'unknown', category: null, needsReview: true }),
   ];
   const s = summarize(txs, NOW);
+  const week = weekSummary(txs, NOW);
 
-  it('totals today, this week and this month from debits only', () => {
-    expect(s.today.spent).toBe(20000);
-    expect(s.week.spent).toBe(50000);
+  it('totals the week and the month from debits only', () => {
+    expect(week.spent).toBe(50000);
     expect(s.month.spent).toBe(149900);
   });
 
   it('counts credits as received, not spent', () => {
-    expect(s.week.received).toBe(500000);
+    expect(s.month.received).toBe(500000);
   });
 
   it('excludes own-account transfers and unknown rows', () => {
-    expect(s.week.spent).toBe(50000);
+    expect(week.spent).toBe(50000);
     expect(s.month.byCategory.find((c) => c.category === 'transfers')).toBeUndefined();
   });
 
   it('ranks categories by this month’s spending', () => {
-    expect(s.topCategory).toEqual({ category: 'shopping', amountMinor: 99900 });
+    expect(s.month.byCategory[0]).toEqual({ category: 'shopping', amountMinor: 99900 });
     expect(s.month.byCategory.map((c) => c.category)).toEqual([
       'shopping',
       'food',
@@ -99,27 +99,32 @@ describe('summarize', () => {
   });
 
   it('splits the week into seven days of spending, Monday first', () => {
-    expect(s.week.days.map((d) => d.day.getDate())).toEqual([19, 20, 21, 22, 23, 24, 25]);
-    expect(s.week.days.map((d) => d.spentMinor)).toEqual([20000, 0, 10000, 20000, 0, 0, 0]);
+    expect(week.days.map((d) => d.day.getDate())).toEqual([19, 20, 21, 22, 23, 24, 25]);
+    expect(week.days.map((d) => d.spentMinor)).toEqual([20000, 0, 10000, 20000, 0, 0, 0]);
+  });
+
+  it('summarizes an earlier week from any day in it', () => {
+    const last = weekSummary(txs, new Date(2026, 9, 15));
+    expect(last.start).toEqual(new Date(2026, 9, 12));
+    expect(last.days.map((d) => d.spentMinor)).toEqual([0, 0, 0, 0, 0, 0, 99900]);
   });
 
   it('lists the debits behind a day’s total', () => {
     const today = spentIn(txs, dayRange(NOW));
     expect(today.map((t) => t.amountMinor)).toEqual([15000, 5000]);
-    expect(today.reduce((sum, t) => sum + t.amountMinor!, 0)).toBe(s.today.spent);
+    expect(today.reduce((sum, t) => sum + t.amountMinor!, 0)).toBe(week.days[3].spentMinor);
     expect(spentIn(txs, dayRange(new Date(2026, 9, 20)))).toEqual([]); // only income and transfers
   });
 
   it('reports money moved between own accounts once per move', () => {
     expect(s.month.moved).toEqual({ amountMinor: 200000, count: 1 });
-    expect(s.month.received).toBe(500000);
   });
 
   it('handles no transactions', () => {
     const empty = summarize([], NOW);
-    expect(empty.today.spent).toBe(0);
-    expect(empty.topCategory).toBeNull();
-    expect(empty.week.days).toHaveLength(7);
+    expect(empty.month.spent).toBe(0);
+    expect(empty.month.byCategory).toEqual([]);
+    expect(weekSummary([], NOW).days).toHaveLength(7);
     expect(empty.month.moved).toEqual({ amountMinor: 0, count: 0 });
   });
 });

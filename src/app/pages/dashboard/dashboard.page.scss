@@ -63,6 +63,35 @@ ion-segment-content {
   padding: 12px 16px 4px;
 }
 
+// Previous and next week around the chart caption. Arrows, not swipe: swiping switches pages.
+.week-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    margin: -8px 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ion-color-primary);
+    font-size: 1.1rem;
+  }
+
+  button:first-child {
+    margin-inline-start: -8px;
+  }
+
+  button:disabled {
+    color: var(--viz-baseline);
+  }
+}
+
 .rows {
   padding: 0;
   margin-top: 4px;

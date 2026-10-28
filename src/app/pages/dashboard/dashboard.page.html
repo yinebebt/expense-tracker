@@ -100,12 +100,36 @@
             </div>
             <app-week-chart
               class="inset"
-              [days]="s().week.days"
+              [days]="week().days"
               [today]="s().today.start"
               [selected]="pickedIndex()"
-              (selectedChange)="dayIndex.set($event)"
+              (selectedChange)="pickDay($event)"
             >
-              This week · {{ money(s().week.spent) }}
+              <span class="week-nav">
+                <button
+                  type="button"
+                  aria-label="Previous week"
+                  [disabled]="!hasEarlier()"
+                  (click)="shiftWeek(-1)"
+                >
+                  <ion-icon name="chevron-back-outline" />
+                </button>
+                <span>
+                  {{
+                    weekTitle() ??
+                      (week().start | date: 'd MMM') + ' – ' + (week().days[6].day | date: 'd MMM')
+                  }}
+                  · {{ money(week().spent) }}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Next week"
+                  [disabled]="isThisWeek()"
+                  (click)="shiftWeek(1)"
+                >
+                  <ion-icon name="chevron-forward-outline" />
+                </button>
+              </span>
             </app-week-chart>
             <ion-list class="rows" [attr.aria-label]="'Spent on ' + (pickedDay() | date: 'EEEE')">
               @for (t of pickedSpent(); track t.id) {
@@ -117,7 +141,7 @@
                 />
               } @empty {
                 <p class="muted">
-                  {{ pickedIndex() > todayIndex() ? 'Nothing yet.' : 'Nothing spent this day.' }}
+                  {{ upcoming() ? 'Nothing yet.' : 'Nothing spent this day.' }}
                 </p>
               }
             </ion-list>

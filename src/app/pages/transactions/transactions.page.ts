@@ -28,6 +28,7 @@ import {
 import { addIcons } from 'ionicons';
 import { add, settingsOutline } from 'ionicons/icons';
 import { TxItemComponent } from '../../components/tx-item.component';
+import { DAY, localDateValue } from '../../models/dates';
 import { formatMinor } from '../../models/money';
 import { CATEGORY_LABELS, Transaction } from '../../models/transaction.model';
 import { TxDetailService } from '../../services/tx-detail.service';
@@ -44,8 +45,6 @@ const PERIODS: { value: Period; label: string }[] = [
   { value: 'last-month', label: 'Last month' },
   { value: 'custom', label: 'Pick dates…' },
 ];
-
-const DAY = 86_400_000;
 
 /** "Today", "Yesterday", or the weekday and date. */
 function dayLabel(day: number): string {
@@ -65,10 +64,6 @@ function parseDay(value: string): Date | null {
   const [y, m, d] = value.split('-').map(Number);
   return y && m && d ? new Date(y, m - 1, d) : null;
 }
-
-/** A date as a date-input value, "2026-10-23". */
-const inputDay = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const shortDate = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -397,7 +392,7 @@ export class TransactionsPage {
   /** Picking dates starts both bounds on today, so the list isn't empty before a date is set. */
   protected setPeriod(p: Period): void {
     if (p === 'custom') {
-      const today = inputDay(new Date());
+      const today = localDateValue(Date.now());
       if (!this.from()) this.from.set(today);
       if (!this.to()) this.to.set(today);
     }

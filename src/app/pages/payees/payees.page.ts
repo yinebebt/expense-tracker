@@ -13,8 +13,8 @@ import {
   IonNote,
   IonRouterLink,
   IonSearchbar,
-  IonSegment,
-  IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
   IonTitle,
   IonToolbar,
   ModalController,
@@ -26,9 +26,24 @@ import { CATEGORY_LABELS } from '../../models/transaction.model';
 import { TransactionService } from '../../services/transaction.service';
 import { PayeeSummary } from '../../summary/payees';
 
-type Filter = 'all' | 'frequent';
+type Sort = 'frequent' | 'paid' | 'received' | 'recent' | 'name';
 
-const FREQUENT = 5;
+const SORTS: { value: Sort; label: string }[] = [
+  { value: 'frequent', label: 'Most frequent' },
+  { value: 'paid', label: 'Most paid' },
+  { value: 'received', label: 'Most received' },
+  { value: 'recent', label: 'Recent' },
+  { value: 'name', label: 'A–Z' },
+];
+
+const COMPARE: Record<Sort, (a: PayeeSummary, b: PayeeSummary) => number> = {
+  // groupByPayee already orders by frequency.
+  frequent: () => 0,
+  paid: (a, b) => b.paidMinor - a.paidMinor,
+  received: (a, b) => b.receivedMinor - a.receivedMinor,
+  recent: (a, b) => b.latest - a.latest,
+  name: (a, b) => a.name.localeCompare(b.name),
+};
 
 @Component({
   selector: 'app-payees',
@@ -42,8 +57,8 @@ const FREQUENT = 5;
     IonButton,
     IonIcon,
     IonSearchbar,
-    IonSegment,
-    IonSegmentButton,
+    IonSelect,
+    IonSelectOption,
     IonLabel,
     IonContent,
     IonList,
@@ -58,21 +73,20 @@ export class PayeesPage {
   private readonly txService = inject(TransactionService);
   private readonly modals = inject(ModalController);
 
-  protected readonly frequent = FREQUENT;
-  protected readonly filter = signal<Filter>('all');
+  protected readonly sorts = SORTS;
+  protected readonly sort = signal<Sort>('frequent');
   protected readonly query = signal('');
   protected readonly fmt = formatMinor;
 
   private readonly split = computed(() => {
-    const min = this.filter() === 'frequent' ? FREQUENT : 1;
     const q = this.query().trim().toLowerCase();
     const people: PayeeSummary[] = [];
     const ownAccounts: PayeeSummary[] = [];
     for (const p of this.txService.payees()) {
-      if (p.count < min) continue;
       if (q && !p.name.toLowerCase().includes(q)) continue;
       (this.categoryOf(p) === 'transfers' ? ownAccounts : people).push(p);
     }
+    people.sort(COMPARE[this.sort()]);
     return { people, ownAccounts };
   });
 

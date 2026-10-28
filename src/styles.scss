@@ -53,6 +53,37 @@ ion-list-header {
   color: var(--ion-color-medium);
 }
 
+// Search with a dropdown pill beside it: Transactions (period) and Payees (sort).
+.search-row {
+  display: flex;
+  align-items: center;
+  padding-inline-end: 12px;
+
+  ion-searchbar {
+    flex: 1;
+    min-width: 0;
+  }
+
+  ion-select {
+    flex-shrink: 0;
+    width: auto;
+    min-height: 36px;
+    --padding-start: 12px;
+    --padding-end: 8px;
+    --border-radius: 18px;
+    --border-width: 1px;
+    --border-style: solid;
+    --border-color: var(--viz-baseline);
+    font-size: 0.9rem;
+  }
+
+  // Set when the dropdown narrows what's listed.
+  ion-select.on {
+    --border-color: var(--ion-color-primary);
+    color: var(--ion-color-primary);
+  }
+}
+
 // Small centered dialog sized to its content: transaction and payee detail.
 ion-modal.dialog {
   --width: min(92vw, 420px);

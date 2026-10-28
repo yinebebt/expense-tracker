@@ -10,6 +10,8 @@ export interface PayeeSummary {
   receivedMinor: number;
   /** Most common category across this payee's transactions. */
   category: Category | null;
+  /** When the most recent transaction happened. */
+  latest: number;
 }
 
 /**
@@ -25,7 +27,7 @@ export const payeeKey = (name: string) =>
 
 /** Groups named transactions by payee, most frequent first. Unknown rows and rows without a name are left out. */
 export function groupByPayee(txs: Transaction[]): PayeeSummary[] {
-  const groups = new Map<string, PayeeSummary & { latest: number; cats: Map<Category, number> }>();
+  const groups = new Map<string, PayeeSummary & { cats: Map<Category, number> }>();
   for (const t of txs) {
     if (!t.merchant || t.type === 'unknown' || t.amountMinor === null) continue;
     const key = payeeKey(t.merchant);
@@ -53,7 +55,7 @@ export function groupByPayee(txs: Transaction[]): PayeeSummary[] {
     }
   }
   return [...groups.values()]
-    .map(({ latest, cats, ...p }) => ({
+    .map(({ cats, ...p }) => ({
       ...p,
       category: [...cats].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
     }))

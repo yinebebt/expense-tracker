@@ -24,10 +24,12 @@ export function categorizeMerchant(merchant: string | null): Category | null {
  * "received from Commercial Bank of Ethiopia". That's almost always the user's own account.
  */
 const INSTITUTION = /\b(bank|telebirr|m-?pesa|cbe ?birr|hello ?cash|e-?birr|kacha|wallet)\b/i;
+/** The wallet paying the user itself, e.g. "M-PESA cashback": income, not a move. */
+const REWARD = /\b(cash ?back|reward|bonus|interest)\b/i;
 
 export function categorize(type: TxType, merchant: string | null): Category | null {
   if (type === 'unknown') return null;
-  if (merchant && INSTITUTION.test(merchant)) return 'transfers';
+  if (merchant && INSTITUTION.test(merchant) && !REWARD.test(merchant)) return 'transfers';
   if (type === 'credit') return 'income';
   if (type === 'debit') return categorizeMerchant(merchant) ?? 'other';
   return null;

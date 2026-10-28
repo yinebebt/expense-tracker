@@ -8,18 +8,24 @@
     </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
-    <ion-searchbar
-      placeholder="Search payees"
-      [debounce]="200"
-      [value]="query()"
-      (ionInput)="query.set($any($event).detail.value ?? '')"
-    />
-    <ion-segment [value]="filter()" (ionChange)="filter.set($any($event).detail.value)">
-      <ion-segment-button value="all"><ion-label>All</ion-label></ion-segment-button>
-      <ion-segment-button value="frequent">
-        <ion-label>{{ frequent }}+ times</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+    <div class="search-row">
+      <ion-searchbar
+        placeholder="Search"
+        [debounce]="200"
+        [value]="query()"
+        (ionInput)="query.set($any($event).detail.value ?? '')"
+      />
+      <ion-select
+        aria-label="Sort"
+        interface="popover"
+        [value]="sort()"
+        (ionChange)="sort.set($any($event).detail.value)"
+      >
+        @for (s of sorts; track s.value) {
+          <ion-select-option [value]="s.value">{{ s.label }}</ion-select-option>
+        }
+      </ion-select>
+    </div>
   </ion-toolbar>
 </ion-header>
 
@@ -58,13 +64,9 @@
           </ion-item>
         }
       </ion-list>
-    } @else {
+    } @else if (query()) {
       <div class="empty">
-        @if (query()) {
-          <p>Nothing matches “{{ query() }}”.</p>
-        } @else {
-          <p>No one with {{ frequent }} or more transactions yet.</p>
-        }
+        <p>Nothing matches “{{ query() }}”.</p>
       </div>
     }
 
